@@ -1,0 +1,144 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system for Dra. Gabriela Health App
+   Primary: #2c123b (dark purple) → HSL: 280 55% 15%
+   Accent: #ffd166 (yellow) → HSL: 45 100% 70%
+   Background: #1a0a23 → HSL: 270 60% 8%
+*/
+
+@layer base {
+  :root {
+    --background: 270 60% 8%;
+    --foreground: 0 0% 100%;
+    
+    --card: 270 55% 12%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 270 55% 12%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 280 55% 15%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 270 50% 20%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 270 40% 18%;
+    --muted-foreground: 0 0% 70%;
+    
+    --accent: 45 100% 70%;
+    --accent-foreground: 280 55% 15%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 270 40% 25%;
+    --input: 270 40% 20%;
+    --ring: 45 100% 70%;
+    
+    --radius: 1rem;
+    
+    --sidebar-background: 270 55% 12%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 45 100% 70%;
+    --sidebar-primary-foreground: 280 55% 15%;
+    --sidebar-accent: 270 50% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 270 40% 25%;
+    --sidebar-ring: 45 100% 70%;
+    
+    /* Safe area variables - universal para todos os dispositivos */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+  }
+
+  .dark {
+    --background: 270 60% 8%;
+    --foreground: 0 0% 100%;
+    
+    --card: 270 55% 12%;
+    --card-foreground: 0 0% 100%;
+    
+    --popover: 270 55% 12%;
+    --popover-foreground: 0 0% 100%;
+    
+    --primary: 280 55% 15%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 270 50% 20%;
+    --secondary-foreground: 0 0% 100%;
+    
+    --muted: 270 40% 18%;
+    --muted-foreground: 0 0% 70%;
+    
+    --accent: 45 100% 70%;
+    --accent-foreground: 280 55% 15%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 270 40% 25%;
+    --input: 270 40% 20%;
+    --ring: 45 100% 70%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Mobile app-like styles */
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Safe area padding - aplicado diretamente sem @supports para máxima compatibilidade */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Bottom nav safe area */
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar but keep functionality */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Utility class for standalone PWA detection */
+@media all and (display-mode: standalone) {
+  .app-content {
+    padding-top: max(env(safe-area-inset-top, 0px), 20px);
+  }
+}
