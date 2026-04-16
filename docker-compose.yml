@@ -1,39 +1,57 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: vitalissy-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: vitalissy
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-vitalissy}
+      POSTGRES_USER: ${POSTGRES_USER:-vitalissy}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vitalissy} -d ${POSTGRES_DB:-vitalissy}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   backend:
-    image: node:20-alpine
-    container_name: vitalissy-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
-    working_dir: /app/backend
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     environment:
       PORT: 3001
       NODE_ENV: production
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/vitalissy
-      JWT_SECRET: change-me-in-production
-      JWT_EXPIRES_IN: 7d
-      UPLOAD_DIR: ./uploads
-      CORS_ORIGIN: http://localhost
-    command: sh -c "npm install && npm run prisma:generate && npm run prisma:deploy && npm run prisma:seed && npm run build && npm run start"
-    ports:
-      - "3001:3001"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vitalissy}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-vitalissy}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      UPLOAD_DIR: /app/uploads
+      CORS_ORIGIN: ${APP_URL:?Defina APP_URL}
+      APP_URL: ${APP_URL:?Defina APP_URL}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-manual}
+      PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-}
+      PAYMENT_SUCCESS_PATH: ${PAYMENT_SUCCESS_PATH:-/premium?payment=success}
+      PAYMENT_CANCEL_PATH: ${PAYMENT_CANCEL_PATH:-/premium?payment=cancelled}
     volumes:
-      - .:/app
+      - backend_uploads:/app/uploads
+    expose:
+      - "3001"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
 
 volumes:
   postgres_data:
+  backend_uploads:
