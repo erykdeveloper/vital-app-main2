@@ -30,6 +30,7 @@ import BodyProgress from "@/pages/BodyProgress";
 import Bioimpedancia from "@/pages/Bioimpedancia";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
+import AdminFinance from "@/pages/admin/AdminFinance";
 import AdminBioimpedance from "@/pages/admin/AdminBioimpedance";
 import AdminBioimpedanceEdit from "@/pages/admin/AdminBioimpedanceEdit";
 import AdminUserHistory from "@/pages/admin/AdminUserHistory";
@@ -86,6 +87,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <AdminDashboard /> },
       { path: "users", element: <AdminUsers /> },
+      { path: "finance", element: <AdminFinance /> },
       { path: "users/:userId/history", element: <AdminUserHistory /> },
       { path: "bioimpedance", element: <AdminBioimpedance /> },
       { path: "bioimpedance/user/:userId", element: <AdminBioimpedance /> },

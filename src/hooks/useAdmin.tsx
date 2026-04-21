@@ -56,6 +56,32 @@ export interface AdminProfile {
   is_admin: boolean;
 }
 
+export interface AdminOrder {
+  id: string;
+  status: string;
+  total_cents: number;
+  currency: string;
+  customer_email: string;
+  customer_name: string | null;
+  user_id: string;
+  created_at: string;
+  paid_at: string | null;
+  items: Array<{
+    product_name: string;
+    quantity: number;
+    total_cents: number;
+  }>;
+  payments: Array<{
+    id: string;
+    provider: string;
+    method: string;
+    status: string;
+    amount_cents: number;
+    provider_payment_id: string | null;
+    created_at: string;
+  }>;
+}
+
 export function useIsAdmin() {
   const { user } = useAuth();
 
@@ -75,6 +101,16 @@ export function useAllProfiles() {
     queryFn: async () => {
       const response = await api.get<{ users: AdminProfile[] }>('/admin/users');
       return response.users;
+    },
+  });
+}
+
+export function useAdminOrders() {
+  return useQuery({
+    queryKey: ['adminOrders'],
+    queryFn: async () => {
+      const response = await api.get<{ orders: AdminOrder[] }>('/admin/orders');
+      return response.orders;
     },
   });
 }

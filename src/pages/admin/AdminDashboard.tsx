@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Users, FileText, Calendar, ArrowLeft } from 'lucide-react';
+import { Users, FileText, Calendar, ArrowLeft, Banknote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAllProfiles } from '@/hooks/useAdmin';
@@ -96,6 +96,22 @@ export default function AdminDashboard() {
                   <h3 className="font-medium">Gerenciar Consultas</h3>
                   <p className="text-sm text-muted-foreground">
                     Visualizar e confirmar agendamentos
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link to="/admin/finance" className="block">
+            <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+              <CardContent className="flex items-center gap-4 p-4">
+                <div className="p-3 rounded-full bg-primary/10">
+                  <Banknote className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Financeiro</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Ver compras, pagamentos e receita
                   </p>
                 </div>
               </CardContent>
