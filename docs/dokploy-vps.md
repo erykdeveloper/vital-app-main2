@@ -28,6 +28,7 @@ POSTGRES_PASSWORD=troque-por-uma-senha-forte-do-postgres
 JWT_SECRET=troque-por-um-segredo-muito-forte-com-mais-de-32-caracteres
 JWT_EXPIRES_IN=7d
 
+CORS_ORIGIN=http://SEU_IP_DA_VPS
 APP_URL=http://SEU_IP_DA_VPS
 FRONTEND_PORT=80
 
@@ -40,7 +41,14 @@ PAYMENT_CANCEL_PATH=/premium?payment=cancelled
 Quando tiver dominio e SSL, troque:
 
 ```env
-APP_URL=https://seu-dominio.com
+APP_URL=https://vitalissy.com.br
+CORS_ORIGIN=https://vitalissy.com.br,https://www.vitalissy.com.br
+```
+
+Para manter mais de um dominio funcionando no login/API, separe as origens por virgula:
+
+```env
+CORS_ORIGIN=https://vitalissy.com.br,https://www.vitalissy.com.br
 ```
 
 ## Primeira subida

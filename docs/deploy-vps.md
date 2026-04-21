@@ -20,7 +20,7 @@ docker compose up -d
 Observacao:
 
 - Troque `JWT_SECRET` no [docker-compose.yml](/Users/wrstore/Documents/vital-app-main/docker-compose.yml:1) antes de producao.
-- Ajuste `CORS_ORIGIN` para seu dominio real.
+- Ajuste `CORS_ORIGIN` para seu dominio real. Para mais de um dominio, use virgulas: `https://vitalissy.com.br,https://www.vitalissy.com.br`.
 
 ## Opcao 2: deploy manual com PM2 + Nginx
 
@@ -49,7 +49,7 @@ cp .env.example .env
 Configure:
 
 ```sh
-VITE_API_URL=https://SEU-DOMINIO/api
+VITE_API_URL=https://vitalissy.com.br/api
 ```
 
 Depois:

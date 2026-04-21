@@ -35,7 +35,7 @@ Variaveis principais:
 ```env
 PAYMENT_PROVIDER="mercado_pago"
 PAYMENT_WEBHOOK_SECRET="segredo-forte"
-APP_URL="https://seu-dominio.com"
+APP_URL="https://vitalissy.com.br"
 PAYMENT_SUCCESS_PATH="/premium?payment=success"
 PAYMENT_CANCEL_PATH="/premium?payment=cancelled"
 ```
