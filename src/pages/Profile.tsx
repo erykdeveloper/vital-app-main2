@@ -156,7 +156,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/auth/login');
+    navigate('/login');
   };
 
   if (loading) {

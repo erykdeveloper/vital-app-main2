@@ -99,7 +99,7 @@ export default function Settings() {
 
   const handleLogout = async () => {
     await signOut();
-    navigate('/auth/login');
+    navigate('/login');
   };
 
   if (loading) {

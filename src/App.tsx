@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -40,12 +40,20 @@ const queryClient = new QueryClient();
 const router = createBrowserRouter([
   // Auth Routes
   {
-    path: "/auth/login",
+    path: "/login",
     element: <Login />,
   },
   {
-    path: "/auth/register",
+    path: "/registro",
     element: <Register />,
+  },
+  {
+    path: "/auth/login",
+    element: <Navigate to="/login" replace />,
+  },
+  {
+    path: "/auth/register",
+    element: <Navigate to="/registro" replace />,
   },
   // Protected Routes with Bottom Nav
   {

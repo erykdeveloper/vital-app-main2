@@ -106,7 +106,7 @@ export default function Login() {
 
         <p className="text-center text-muted-foreground">
           Não tem conta?{' '}
-          <Link to="/auth/register" className="text-accent hover:underline font-medium">
+          <Link to="/registro" className="text-accent hover:underline font-medium">
             Criar conta
           </Link>
         </p>

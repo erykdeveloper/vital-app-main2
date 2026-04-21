@@ -134,7 +134,7 @@ export default function Register() {
     <div className="min-h-screen bg-background flex flex-col p-6">
       <div className="w-full max-w-sm mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <Link to="/auth/login" className="text-muted-foreground hover:text-foreground">
+          <Link to="/login" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-xl font-bold">Criar Conta</h1>
@@ -283,7 +283,7 @@ export default function Register() {
 
         <p className="text-center text-muted-foreground text-sm">
           Já tem conta?{' '}
-          <Link to="/auth/login" className="text-accent hover:underline font-medium">
+          <Link to="/login" className="text-accent hover:underline font-medium">
             Entrar
           </Link>
         </p>
