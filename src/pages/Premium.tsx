@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Crown, Check, CreditCard, QrCode } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -71,10 +71,21 @@ const formatCurrency = (priceCents: number, currency: string) =>
 
 export default function Premium() {
   const { toast } = useToast();
+  const location = useLocation();
   const [product, setProduct] = useState<PaymentProduct | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const autoCheckoutTriggeredRef = useRef(false);
+  const registerFlowState = location.state as
+    | { autostartCheckout?: boolean; paymentMethod?: 'pix' | 'credit_card'; fromRegister?: boolean }
+    | null;
+
+  useEffect(() => {
+    if (registerFlowState?.paymentMethod) {
+      setPaymentMethod(registerFlowState.paymentMethod);
+    }
+  }, [registerFlowState?.paymentMethod]);
 
   useEffect(() => {
     const paymentStatus = new URLSearchParams(window.location.search).get('payment');
@@ -174,6 +185,19 @@ export default function Premium() {
     }
   }
 
+  useEffect(() => {
+    if (!registerFlowState?.autostartCheckout) return;
+    if (autoCheckoutTriggeredRef.current) return;
+    if (isLoading || !product || isCheckoutLoading) return;
+
+    autoCheckoutTriggeredRef.current = true;
+    toast({
+      title: 'Conta criada',
+      description: 'Estamos iniciando seu checkout premium.',
+    });
+    void handleCheckout();
+  }, [isCheckoutLoading, isLoading, product, registerFlowState?.autostartCheckout, toast]);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center gap-4">
@@ -198,6 +222,11 @@ export default function Premium() {
           </span>
           <span className="text-muted-foreground">/mês</span>
         </div>
+        {registerFlowState?.fromRegister && (
+          <p className="text-sm text-accent">
+            Sua conta já foi criada. Falta só concluir o pagamento para liberar o Premium.
+          </p>
+        )}
       </div>
 
       {/* Benefits */}

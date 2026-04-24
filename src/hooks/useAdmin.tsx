@@ -54,6 +54,25 @@ export interface AdminProfile {
   entry_date: string | null;
   avatar_url?: string | null;
   is_admin: boolean;
+  is_personal_trainer?: boolean;
+  trainer_application_status?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  trainer_application_id?: string | null;
+}
+
+export interface TrainerApplication {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected';
+  full_name: string;
+  cref: string;
+  cref_state: string;
+  specialties: string | null;
+  experience_years: number | null;
+  instagram_handle: string | null;
+  proof_notes: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+  reviewed_at: string | null;
+  user: AdminProfile | null;
 }
 
 export interface AdminOrder {
@@ -209,6 +228,57 @@ export function useSetAdminRole() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['allProfiles'] });
       queryClient.invalidateQueries({ queryKey: ['isAdmin'] });
+    },
+  });
+}
+
+export function useSetTrainerRole() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, enable }: { userId: string; enable: boolean }) => {
+      await api.patch(`/admin/users/${userId}/trainer-role`, {
+        is_personal_trainer: enable,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ['trainerApplications'] });
+    },
+  });
+}
+
+export function useTrainerApplications() {
+  return useQuery({
+    queryKey: ['trainerApplications'],
+    queryFn: async () => {
+      const response = await api.get<{ applications: TrainerApplication[] }>('/admin/trainer-applications');
+      return response.applications;
+    },
+  });
+}
+
+export function useReviewTrainerApplication() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      applicationId,
+      decision,
+      rejectionReason,
+    }: {
+      applicationId: string;
+      decision: 'approve' | 'reject';
+      rejectionReason?: string | null;
+    }) => {
+      await api.patch(`/admin/trainer-applications/${applicationId}/review`, {
+        decision,
+        rejection_reason: rejectionReason ?? null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['allProfiles'] });
+      queryClient.invalidateQueries({ queryKey: ['trainerApplications'] });
     },
   });
 }

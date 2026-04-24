@@ -9,7 +9,16 @@ export function serializeUser(user: User, roles: UserRole[]) {
   };
 }
 
-export function serializeProfile(profile: Profile, email: string, isAdmin = false) {
+export function serializeProfile(
+  profile: Profile,
+  email: string,
+  options: {
+    isAdmin?: boolean;
+    isPersonalTrainer?: boolean;
+    trainerApplicationStatus?: string | null;
+    trainerApplicationId?: string | null;
+  } = {},
+) {
   return {
     id: profile.userId,
     full_name: profile.fullName,
@@ -22,7 +31,10 @@ export function serializeProfile(profile: Profile, email: string, isAdmin = fals
     entry_date: profile.entryDate,
     avatar_url: profile.avatarUrl,
     created_at: profile.createdAt,
-    is_admin: isAdmin,
+    is_admin: options.isAdmin ?? false,
+    is_personal_trainer: options.isPersonalTrainer ?? false,
+    trainer_application_status: options.trainerApplicationStatus ?? null,
+    trainer_application_id: options.trainerApplicationId ?? null,
   };
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield } from 'lucide-react';
+import { ArrowLeft, Search, MoreVertical, Crown, Trash2, Shield, BadgeCheck, Hourglass } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,7 +21,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useAllProfiles, useUpdateUserPremium, useDeleteUser, useSetAdminRole } from '@/hooks/useAdmin';
+import {
+  useAllProfiles,
+  useUpdateUserPremium,
+  useDeleteUser,
+  useSetAdminRole,
+  useSetTrainerRole,
+  useTrainerApplications,
+  useReviewTrainerApplication,
+} from '@/hooks/useAdmin';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -31,9 +39,14 @@ export default function AdminUsers() {
   const updatePremium = useUpdateUserPremium();
   const deleteUser = useDeleteUser();
   const setAdminRole = useSetAdminRole();
+  const setTrainerRole = useSetTrainerRole();
+  const { data: trainerApplications } = useTrainerApplications();
+  const reviewTrainerApplication = useReviewTrainerApplication();
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [userToDelete, setUserToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const pendingApplications = trainerApplications?.filter((application) => application.status === 'pending') ?? [];
 
   const filteredProfiles = profiles?.filter(
     (p) =>
@@ -96,6 +109,47 @@ export default function AdminUsers() {
     }
   };
 
+  const handleToggleTrainer = async (userId: string, isCurrentlyTrainer: boolean) => {
+    try {
+      await setTrainerRole.mutateAsync({ userId, enable: !isCurrentlyTrainer });
+      toast({
+        title: isCurrentlyTrainer ? 'Personal removido' : 'Personal concedido',
+        description: isCurrentlyTrainer
+          ? 'O usuário não possui mais acesso de personal.'
+          : 'O usuário agora possui acesso de personal trainer.',
+      });
+    } catch {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar o papel de personal.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleReviewApplication = async (applicationId: string, decision: 'approve' | 'reject') => {
+    try {
+      await reviewTrainerApplication.mutateAsync({
+        applicationId,
+        decision,
+        rejectionReason: decision === 'reject' ? 'Solicitação reprovada pela administração.' : null,
+      });
+      toast({
+        title: decision === 'approve' ? 'Solicitação aprovada' : 'Solicitação rejeitada',
+        description:
+          decision === 'approve'
+            ? 'O personal foi aprovado e recebeu acesso premium gratuito.'
+            : 'A solicitação foi marcada como rejeitada.',
+      });
+    } catch {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível revisar a solicitação de personal.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="p-4 pb-24 space-y-4">
       <div className="flex items-center gap-4">
@@ -116,6 +170,65 @@ export default function AdminUsers() {
           className="pl-10"
         />
       </div>
+
+      {pendingApplications.length > 0 && (
+        <Card className="border-amber-500/30">
+          <CardContent className="p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <Hourglass className="w-4 h-4 text-amber-400" />
+              <h2 className="font-semibold">Solicitações pendentes de personal</h2>
+            </div>
+
+            <div className="space-y-3">
+              {pendingApplications.map((application) => (
+                <div key={application.id} className="rounded-xl border border-border p-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-1">
+                      <p className="font-medium">{application.full_name}</p>
+                      <p className="text-sm text-muted-foreground">{application.user?.email}</p>
+                      <p className="text-sm text-muted-foreground">
+                        CREF: {application.cref}/{application.cref_state}
+                      </p>
+                      {application.specialties && (
+                        <p className="text-sm text-muted-foreground">Especialidades: {application.specialties}</p>
+                      )}
+                      {application.experience_years !== null && (
+                        <p className="text-sm text-muted-foreground">
+                          Experiência: {application.experience_years} anos
+                        </p>
+                      )}
+                      {application.instagram_handle && (
+                        <p className="text-sm text-muted-foreground">Instagram: {application.instagram_handle}</p>
+                      )}
+                      {application.proof_notes && (
+                        <p className="text-sm text-muted-foreground">Comprovação: {application.proof_notes}</p>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleReviewApplication(application.id, 'approve')}
+                        disabled={reviewTrainerApplication.isPending}
+                      >
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleReviewApplication(application.id, 'reject')}
+                        disabled={reviewTrainerApplication.isPending}
+                      >
+                        Rejeitar
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">
@@ -144,6 +257,18 @@ export default function AdminUsers() {
                         <Badge variant="outline" className="shrink-0">
                           <Shield className="w-3 h-3 mr-1" />
                           Admin
+                        </Badge>
+                      )}
+                      {profile.is_personal_trainer && (
+                        <Badge variant="outline" className="shrink-0">
+                          <BadgeCheck className="w-3 h-3 mr-1" />
+                          Personal
+                        </Badge>
+                      )}
+                      {profile.trainer_application_status === 'PENDING' && (
+                        <Badge variant="outline" className="shrink-0 border-amber-500/40 text-amber-300">
+                          <Hourglass className="w-3 h-3 mr-1" />
+                          Personal Pendente
                         </Badge>
                       )}
                     </div>
@@ -175,6 +300,12 @@ export default function AdminUsers() {
                       >
                         <Shield className="w-4 h-4 mr-2" />
                         {profile.is_admin ? 'Remover Admin' : 'Tornar Admin'}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleToggleTrainer(profile.id, !!profile.is_personal_trainer)}
+                      >
+                        <BadgeCheck className="w-4 h-4 mr-2" />
+                        {profile.is_personal_trainer ? 'Remover Personal' : 'Tornar Personal'}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive"

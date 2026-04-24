@@ -14,6 +14,10 @@ export interface Profile {
   created_at: string;
   entry_date: string | null;
   avatar_url: string | null;
+  is_admin?: boolean;
+  is_personal_trainer?: boolean;
+  trainer_application_status?: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  trainer_application_id?: string | null;
 }
 
 export function useProfile() {

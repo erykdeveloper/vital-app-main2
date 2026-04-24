@@ -46,3 +46,13 @@ export function requireAdmin(req: AuthenticatedRequest, res: Response, next: Nex
 
   return next();
 }
+
+export function requireRole(role: UserRole, message?: string) {
+  return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.auth?.roles.includes(role)) {
+      return res.status(403).json({ message: message ?? "Acesso restrito" });
+    }
+
+    return next();
+  };
+}

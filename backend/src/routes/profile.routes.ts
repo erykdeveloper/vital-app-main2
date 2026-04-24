@@ -38,7 +38,7 @@ router.get(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const user = await prisma.user.findUnique({
       where: { id: req.auth!.userId },
-      include: { profile: true, roles: true },
+      include: { profile: true, roles: true, trainerApplication: true },
     });
 
     if (!user?.profile) {
@@ -49,7 +49,12 @@ router.get(
       profile: serializeProfile(
         user.profile,
         user.email,
-        user.roles.some((role) => role.role === UserRole.ADMIN),
+        {
+          isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
+          isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
+          trainerApplicationStatus: user.trainerApplication?.status ?? null,
+          trainerApplicationId: user.trainerApplication?.id ?? null,
+        },
       ),
     });
   }),
@@ -72,7 +77,10 @@ router.patch(
     });
 
     return res.json({
-      profile: serializeProfile(profile, req.auth!.email, req.auth!.roles.includes(UserRole.ADMIN)),
+      profile: serializeProfile(profile, req.auth!.email, {
+        isAdmin: req.auth!.roles.includes(UserRole.ADMIN),
+        isPersonalTrainer: req.auth!.roles.includes(UserRole.PERSONAL_TRAINER),
+      }),
     });
   }),
 );
@@ -93,7 +101,10 @@ router.post(
     });
 
     return res.json({
-      profile: serializeProfile(profile, req.auth!.email, req.auth!.roles.includes(UserRole.ADMIN)),
+      profile: serializeProfile(profile, req.auth!.email, {
+        isAdmin: req.auth!.roles.includes(UserRole.ADMIN),
+        isPersonalTrainer: req.auth!.roles.includes(UserRole.PERSONAL_TRAINER),
+      }),
     });
   }),
 );

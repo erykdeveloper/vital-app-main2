@@ -102,11 +102,12 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Sora", "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background-image:
-      radial-gradient(circle at top, hsl(var(--primary) / 0.08), transparent 28%),
+      radial-gradient(circle at top left, hsl(var(--primary) / 0.08), transparent 20%),
+      radial-gradient(circle at top right, hsl(320 60% 30% / 0.22), transparent 24%),
       linear-gradient(180deg, hsl(var(--background)), hsl(var(--background-strong)));
   }
 }

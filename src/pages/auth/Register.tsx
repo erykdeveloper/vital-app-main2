@@ -4,6 +4,7 @@ import { Eye, EyeOff, Heart, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +18,16 @@ export default function Register() {
     weight_kg: '',
     password: '',
     confirmPassword: '',
+    cref: '',
+    cref_state: '',
+    specialties: '',
+    experience_years: '',
+    instagram_handle: '',
+    proof_notes: '',
   });
+  const [accountType, setAccountType] = useState<'client' | 'personal'>('client');
+  const [selectedPlan, setSelectedPlan] = useState<'essential' | 'premium'>('premium');
+  const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -26,8 +36,8 @@ export default function Register() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-accent" />
       </div>
     );
   }
@@ -40,7 +50,6 @@ export default function Register() {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  // Handler for numeric-only fields (age, height)
   const handleNumericInput = (
     e: React.ChangeEvent<HTMLInputElement>,
     field: string,
@@ -48,24 +57,20 @@ export default function Register() {
   ) => {
     const numbersOnly = e.target.value.replace(/\D/g, '');
     let value = numbersOnly;
-    
+
     if (maxValue && numbersOnly !== '') {
       const numValue = parseInt(numbersOnly, 10);
       value = Math.min(numValue, maxValue).toString();
     }
-    
-    setFormData(prev => ({ ...prev, [field]: value }));
+
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  // Handler for weight field (accepts comma for decimals)
   const handleWeightInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const sanitized = e.target.value.replace(/[^0-9,]/g, '');
-    // Allow only one comma
     const parts = sanitized.split(',');
-    const formatted = parts.length > 2 
-      ? parts[0] + ',' + parts.slice(1).join('')
-      : sanitized;
-    setFormData(prev => ({ ...prev, weight_kg: formatted }));
+    const formatted = parts.length > 2 ? parts[0] + ',' + parts.slice(1).join('') : sanitized;
+    setFormData((prev) => ({ ...prev, weight_kg: formatted }));
   };
 
   const validateForm = () => {
@@ -81,6 +86,16 @@ export default function Register() {
     if (formData.password !== formData.confirmPassword) {
       toast({ variant: 'destructive', title: 'As senhas não coincidem' });
       return false;
+    }
+    if (accountType === 'personal') {
+      if (!formData.cref.trim() || !formData.cref_state.trim()) {
+        toast({ variant: 'destructive', title: 'Informe CREF e UF para solicitar acesso de personal' });
+        return false;
+      }
+      if (!formData.proof_notes.trim()) {
+        toast({ variant: 'destructive', title: 'Explique sua comprovação profissional' });
+        return false;
+      }
     }
     if (Number(formData.age) <= 0) {
       toast({ variant: 'destructive', title: 'Idade inválida' });
@@ -113,12 +128,44 @@ export default function Register() {
         height_cm: Number(formData.height_cm),
         weight_kg: weightValue,
         password: formData.password,
+        account_type: accountType,
+        trainer_application:
+          accountType === 'personal'
+            ? {
+                cref: formData.cref.trim(),
+                cref_state: formData.cref_state.trim().toUpperCase(),
+                specialties: formData.specialties.trim() || null,
+                experience_years: formData.experience_years ? Number(formData.experience_years) : null,
+                instagram_handle: formData.instagram_handle.trim() || null,
+                proof_notes: formData.proof_notes.trim() || null,
+              }
+            : undefined,
       });
+
       toast({
-        title: 'Conta criada com sucesso!',
-        description: 'Bem-vindo(a)!',
+        title: accountType === 'personal' ? 'Solicitação enviada!' : 'Conta criada com sucesso!',
+        description:
+          accountType === 'personal'
+            ? 'Seu cadastro de personal ficou pendente de aprovação pela administração.'
+            : selectedPlan === 'premium'
+              ? 'Agora vamos finalizar seu acesso premium.'
+              : 'Bem-vindo(a)!',
       });
-      navigate('/');
+
+      navigate(
+        accountType === 'personal' ? '/' : selectedPlan === 'premium' ? '/premium' : '/',
+        accountType === 'personal'
+          ? undefined
+          : selectedPlan === 'premium'
+            ? {
+                state: {
+                  autostartCheckout: true,
+                  paymentMethod,
+                  fromRegister: true,
+                },
+              }
+            : undefined,
+      );
     } catch (err) {
       toast({
         variant: 'destructive',
@@ -272,12 +319,193 @@ export default function Register() {
             />
           </div>
 
+          <div className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
+            <div>
+              <h2 className="font-semibold">Tipo de cadastro</h2>
+              <p className="text-sm text-muted-foreground">
+                Escolha se você está entrando como cliente ou solicitando acesso como personal trainer.
+              </p>
+            </div>
+
+            <RadioGroup
+              value={accountType}
+              onValueChange={(value) => setAccountType(value as 'client' | 'personal')}
+              className="gap-3"
+            >
+              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 hover:bg-secondary/30">
+                <RadioGroupItem value="client" className="mt-1" />
+                <div>
+                  <p className="font-medium">Sou aluno / cliente</p>
+                  <p className="text-sm text-muted-foreground">
+                    Fluxo normal de cadastro com opção de plano Essencial ou Premium.
+                  </p>
+                </div>
+              </Label>
+
+              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4 hover:bg-accent/10">
+                <RadioGroupItem value="personal" className="mt-1" />
+                <div>
+                  <p className="font-medium">Sou personal trainer</p>
+                  <p className="text-sm text-muted-foreground">
+                    O acesso do personal é gratuito após aprovação, para trazer e acompanhar alunos.
+                  </p>
+                </div>
+              </Label>
+            </RadioGroup>
+          </div>
+
+          {accountType === 'client' ? (
+            <div className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
+              <div>
+                <h2 className="font-semibold">Escolha seu plano ao criar a conta</h2>
+                <p className="text-sm text-muted-foreground">
+                  Você pode entrar no Essencial agora ou já seguir direto para a compra do Premium.
+                </p>
+              </div>
+
+              <RadioGroup
+                value={selectedPlan}
+                onValueChange={(value) => setSelectedPlan(value as 'essential' | 'premium')}
+                className="gap-3"
+              >
+                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 hover:bg-secondary/30">
+                  <RadioGroupItem value="essential" className="mt-1" />
+                  <div>
+                    <p className="font-medium">Plano Essencial</p>
+                    <p className="text-sm text-muted-foreground">Cria a conta e entra no app sem cobrança imediata.</p>
+                  </div>
+                </Label>
+
+                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4 hover:bg-accent/10">
+                  <RadioGroupItem value="premium" className="mt-1" />
+                  <div>
+                    <p className="font-medium">Quero ser Premium agora</p>
+                    <p className="text-sm text-muted-foreground">
+                      A conta é criada e você segue direto para finalizar o pagamento.
+                    </p>
+                  </div>
+                </Label>
+              </RadioGroup>
+
+              {selectedPlan === 'premium' && (
+                <div className="space-y-3 rounded-xl border border-border bg-background/30 p-3">
+                  <p className="text-sm font-medium">Forma de pagamento inicial</p>
+                  <RadioGroup
+                    value={paymentMethod}
+                    onValueChange={(value) => setPaymentMethod(value as 'pix' | 'credit_card')}
+                    className="grid gap-3 sm:grid-cols-2"
+                  >
+                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/30">
+                      <RadioGroupItem value="pix" />
+                      <span className="text-sm">PIX</span>
+                    </Label>
+                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/30">
+                      <RadioGroupItem value="credit_card" />
+                      <span className="text-sm">Cartão de crédito</span>
+                    </Label>
+                  </RadioGroup>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4">
+              <div>
+                <h2 className="font-semibold">Validação de personal trainer</h2>
+                <p className="text-sm text-muted-foreground">
+                  Seu cadastro ficará pendente até validação dos dados. Depois da aprovação, o acesso premium do personal será liberado gratuitamente.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="cref">CREF</Label>
+                  <Input
+                    id="cref"
+                    name="cref"
+                    value={formData.cref}
+                    onChange={handleChange}
+                    placeholder="Ex.: 123456-G/SP"
+                    className="bg-input border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cref_state">UF</Label>
+                  <Input
+                    id="cref_state"
+                    name="cref_state"
+                    value={formData.cref_state}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cref_state: e.target.value.toUpperCase().slice(0, 2) }))}
+                    placeholder="SP"
+                    className="bg-input border-border"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="specialties">Especialidades</Label>
+                  <Input
+                    id="specialties"
+                    name="specialties"
+                    value={formData.specialties}
+                    onChange={handleChange}
+                    placeholder="Ex.: hipertrofia, emagrecimento"
+                    className="bg-input border-border"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="experience_years">Anos de experiência</Label>
+                  <Input
+                    id="experience_years"
+                    name="experience_years"
+                    type="text"
+                    inputMode="numeric"
+                    value={formData.experience_years}
+                    onChange={(e) => handleNumericInput(e, 'experience_years', 80)}
+                    placeholder="5"
+                    className="bg-input border-border"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="instagram_handle">Instagram profissional</Label>
+                <Input
+                  id="instagram_handle"
+                  name="instagram_handle"
+                  value={formData.instagram_handle}
+                  onChange={handleChange}
+                  placeholder="@seuusuario"
+                  className="bg-input border-border"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="proof_notes">Comprovação e apresentação</Label>
+                <Input
+                  id="proof_notes"
+                  name="proof_notes"
+                  value={formData.proof_notes}
+                  onChange={handleChange}
+                  placeholder="Explique sua atuação, nicho e dados para validação"
+                  className="bg-input border-border"
+                />
+              </div>
+            </div>
+          )}
+
           <Button
             type="submit"
             className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
             disabled={loading}
           >
-            {loading ? 'Criando...' : 'Criar conta'}
+            {loading
+              ? 'Criando...'
+              : accountType === 'personal'
+                ? 'Enviar cadastro para aprovação'
+                : selectedPlan === 'premium'
+                  ? 'Criar conta e ir para o pagamento'
+                  : 'Criar conta'}
           </Button>
         </form>
 

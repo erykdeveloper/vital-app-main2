@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Edit, LogOut, Save, X, Trophy, BarChart3, Scale, ArrowLeft, Camera } from 'lucide-react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { User, Edit, Save, X, Trophy, BarChart3, Scale, ArrowLeft, Camera } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useToast } from '@/hooks/use-toast';
@@ -13,11 +12,9 @@ import { cn } from '@/lib/utils';
 import { handleIntegerKeyDown, handleDecimalKeyDown, sanitizeInteger, sanitizeDecimal } from '@/lib/inputValidation';
 
 export default function Profile() {
-  const { signOut } = useAuth();
   const { profile, loading, uploading, updateProfile, uploadAvatar } = useProfile();
   const { achievements, userAchievements } = useAchievements();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -152,11 +149,6 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await signOut();
-    navigate('/login');
   };
 
   if (loading) {
@@ -399,16 +391,6 @@ export default function Profile() {
           )}
         </div>
       </div>
-
-      {/* Logout Button */}
-      <Button
-        variant="outline"
-        onClick={handleLogout}
-        className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-      >
-        <LogOut className="w-5 h-5 mr-2" />
-        Sair da conta
-      </Button>
 
       {/* App Info */}
       <div className="text-center text-sm text-muted-foreground pt-4">

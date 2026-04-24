@@ -14,6 +14,15 @@ interface AuthContextType {
     height_cm: number;
     weight_kg: number;
     password: string;
+    account_type?: 'client' | 'personal';
+    trainer_application?: {
+      cref: string;
+      cref_state: string;
+      specialties?: string | null;
+      experience_years?: number | null;
+      instagram_handle?: string | null;
+      proof_notes?: string | null;
+    };
   }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
@@ -81,6 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     height_cm: number;
     weight_kg: number;
     password: string;
+    account_type?: 'client' | 'personal';
+    trainer_application?: {
+      cref: string;
+      cref_state: string;
+      specialties?: string | null;
+      experience_years?: number | null;
+      instagram_handle?: string | null;
+      proof_notes?: string | null;
+    };
   }) => {
     const response = await api.post<{ token: string; user: BackendUser }>('/auth/register', payload, false);
 

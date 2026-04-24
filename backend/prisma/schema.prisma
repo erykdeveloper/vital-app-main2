@@ -10,6 +10,25 @@ datasource db {
 enum UserRole {
   USER
   ADMIN
+  PERSONAL_TRAINER
+}
+
+enum TrainerClientStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum BodyProgressPhotoPose {
+  FRONT
+  SIDE
+  BACK
+  CUSTOM
+}
+
+enum TrainerApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum AppointmentStatus {
@@ -83,6 +102,10 @@ model User {
   payments            Payment[]
   auditLogsAsActor    AuditLog[]           @relation("AuditActor")
   auditLogsAsTarget   AuditLog[]           @relation("AuditTarget")
+  bodyProgressPhotos  BodyProgressPhoto[]
+  trainerClients      TrainerClient[]      @relation("TrainerRelationTrainer")
+  assignedTrainers    TrainerClient[]      @relation("TrainerRelationClient")
+  trainerApplication  TrainerApplication?
 }
 
 model Profile {
@@ -241,6 +264,77 @@ model BioimpedanceRecord {
   user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+model TrainerClient {
+  id         String              @id @default(uuid()) @db.Uuid
+  trainerId  String              @db.Uuid
+  clientId   String              @db.Uuid
+  status     TrainerClientStatus @default(ACTIVE)
+  notes      String?
+  goals      String?
+  trainingPlan String?
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  trainer    User                @relation("TrainerRelationTrainer", fields: [trainerId], references: [id], onDelete: Cascade)
+  client     User                @relation("TrainerRelationClient", fields: [clientId], references: [id], onDelete: Cascade)
+  logs       TrainerClientLog[]
+
+  @@unique([trainerId, clientId])
+  @@index([trainerId, status])
+  @@index([clientId, status])
+}
+
+model TrainerClientLog {
+  id               String        @id @default(uuid()) @db.Uuid
+  trainerClientId  String        @db.Uuid
+  trainerId        String        @db.Uuid
+  clientId         String        @db.Uuid
+  title            String
+  content          String
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  trainerClient    TrainerClient @relation(fields: [trainerClientId], references: [id], onDelete: Cascade)
+
+  @@index([trainerClientId, createdAt])
+  @@index([trainerId, clientId, createdAt])
+}
+
+model BodyProgressPhoto {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @db.Uuid
+  imageUrl  String
+  pose      BodyProgressPhotoPose
+  label     String?
+  notes     String?
+  takenAt   DateTime
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  user      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+  @@index([pose])
+}
+
+model TrainerApplication {
+  id              String                   @id @default(uuid()) @db.Uuid
+  userId          String                   @unique @db.Uuid
+  status          TrainerApplicationStatus @default(PENDING)
+  fullName        String
+  cref            String
+  crefState       String
+  specialties     String?
+  experienceYears Int?
+  instagramHandle String?
+  proofNotes      String?
+  reviewedAt      DateTime?
+  reviewedBy      String?                  @db.Uuid
+  rejectionReason String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
 }
 
 model Product {

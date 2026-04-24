@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { UserRole } from "@prisma/client";
+import { TrainerApplicationStatus, UserRole } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAdmin, requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -18,6 +18,15 @@ const roleSchema = z.object({
   is_admin: z.boolean(),
 });
 
+const trainerRoleSchema = z.object({
+  is_personal_trainer: z.boolean(),
+});
+
+const reviewTrainerApplicationSchema = z.object({
+  decision: z.enum(["approve", "reject"]),
+  rejection_reason: z.string().trim().max(500).optional().nullable(),
+});
+
 router.use(requireAuth, requireAdmin);
 
 router.get(
@@ -27,6 +36,7 @@ router.get(
       include: {
         profile: true,
         roles: true,
+        trainerApplication: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -40,7 +50,12 @@ router.get(
           serializeProfile(
             user.profile!,
             user.email,
-            user.roles.some((role) => role.role === UserRole.ADMIN),
+            {
+              isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
+              isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
+              trainerApplicationStatus: user.trainerApplication?.status ?? null,
+              trainerApplicationId: user.trainerApplication?.id ?? null,
+            },
           ),
         ),
     });
@@ -71,7 +86,10 @@ router.patch(
       profile: serializeProfile(
         profile,
         profile.user.email,
-        profile.user.roles.some((role) => role.role === UserRole.ADMIN),
+        {
+          isAdmin: profile.user.roles.some((role) => role.role === UserRole.ADMIN),
+          isPersonalTrainer: profile.user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
+        },
       ),
     });
   }),
@@ -118,6 +136,171 @@ router.patch(
       entityType: "user_role",
       entityId: targetUserId,
       details: { role: "ADMIN" },
+    });
+
+    return res.status(204).send();
+  }),
+);
+
+router.patch(
+  "/users/:userId/trainer-role",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const data = trainerRoleSchema.parse(req.body);
+    const targetUserId = getRouteParam(req.params.userId, "userId");
+
+    if (data.is_personal_trainer) {
+      await prisma.userRoleAssignment.upsert({
+        where: {
+          userId_role: {
+            userId: targetUserId,
+            role: UserRole.PERSONAL_TRAINER,
+          },
+        },
+        update: {},
+        create: {
+          userId: targetUserId,
+          role: UserRole.PERSONAL_TRAINER,
+          createdBy: req.auth!.userId,
+        },
+      });
+    } else {
+      await prisma.userRoleAssignment.deleteMany({
+        where: {
+          userId: targetUserId,
+          role: UserRole.PERSONAL_TRAINER,
+        },
+      });
+    }
+
+    await logAudit({
+      actorUserId: req.auth!.userId,
+      targetUserId,
+      action: data.is_personal_trainer ? "grant_role" : "revoke_role",
+      entityType: "user_role",
+      entityId: targetUserId,
+      details: { role: "PERSONAL_TRAINER" },
+    });
+
+    return res.status(204).send();
+  }),
+);
+
+router.get(
+  "/trainer-applications",
+  asyncHandler(async (_req, res) => {
+    const applications = await prisma.trainerApplication.findMany({
+      include: {
+        user: {
+          include: {
+            profile: true,
+            roles: true,
+          },
+        },
+      },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    });
+
+    return res.json({
+      applications: applications.map((application) => ({
+        id: application.id,
+        status: application.status.toLowerCase(),
+        full_name: application.fullName,
+        cref: application.cref,
+        cref_state: application.crefState,
+        specialties: application.specialties,
+        experience_years: application.experienceYears,
+        instagram_handle: application.instagramHandle,
+        proof_notes: application.proofNotes,
+        rejection_reason: application.rejectionReason,
+        created_at: application.createdAt,
+        reviewed_at: application.reviewedAt,
+        user: application.user.profile
+          ? serializeProfile(application.user.profile, application.user.email, {
+              isAdmin: application.user.roles.some((role) => role.role === UserRole.ADMIN),
+              isPersonalTrainer: application.user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
+              trainerApplicationStatus: application.status,
+              trainerApplicationId: application.id,
+            })
+          : null,
+      })),
+    });
+  }),
+);
+
+router.patch(
+  "/trainer-applications/:applicationId/review",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const applicationId = getRouteParam(req.params.applicationId, "applicationId");
+    const data = reviewTrainerApplicationSchema.parse(req.body);
+    const application = await prisma.trainerApplication.findUnique({
+      where: { id: applicationId },
+    });
+
+    if (!application) {
+      return res.status(404).json({ message: "Solicitacao de personal nao encontrada" });
+    }
+
+    if (data.decision === "approve") {
+      await prisma.$transaction([
+        prisma.trainerApplication.update({
+          where: { id: applicationId },
+          data: {
+            status: TrainerApplicationStatus.APPROVED,
+            rejectionReason: null,
+            reviewedAt: new Date(),
+            reviewedBy: req.auth!.userId,
+          },
+        }),
+        prisma.userRoleAssignment.upsert({
+          where: {
+            userId_role: {
+              userId: application.userId,
+              role: UserRole.PERSONAL_TRAINER,
+            },
+          },
+          update: {},
+          create: {
+            userId: application.userId,
+            role: UserRole.PERSONAL_TRAINER,
+            createdBy: req.auth!.userId,
+          },
+        }),
+        prisma.profile.update({
+          where: { userId: application.userId },
+          data: {
+            isPremium: true,
+          },
+        }),
+      ]);
+    } else {
+      await prisma.$transaction([
+        prisma.trainerApplication.update({
+          where: { id: applicationId },
+          data: {
+            status: TrainerApplicationStatus.REJECTED,
+            rejectionReason: data.rejection_reason ?? "Cadastro recusado",
+            reviewedAt: new Date(),
+            reviewedBy: req.auth!.userId,
+          },
+        }),
+        prisma.userRoleAssignment.deleteMany({
+          where: {
+            userId: application.userId,
+            role: UserRole.PERSONAL_TRAINER,
+          },
+        }),
+      ]);
+    }
+
+    await logAudit({
+      actorUserId: req.auth!.userId,
+      targetUserId: application.userId,
+      action: data.decision === "approve" ? "approve_trainer_application" : "reject_trainer_application",
+      entityType: "trainer_application",
+      entityId: applicationId,
+      details: {
+        rejection_reason: data.rejection_reason ?? null,
+      },
     });
 
     return res.status(204).send();

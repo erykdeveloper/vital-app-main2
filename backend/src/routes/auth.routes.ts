@@ -18,6 +18,25 @@ const registerSchema = z.object({
   height_cm: z.number().int().positive(),
   weight_kg: z.number().positive(),
   password: z.string().min(6),
+  account_type: z.enum(["client", "personal"]).default("client"),
+  trainer_application: z
+    .object({
+      cref: z.string().min(3),
+      cref_state: z.string().min(2).max(2),
+      specialties: z.string().trim().max(200).optional().nullable(),
+      experience_years: z.number().int().min(0).max(80).optional().nullable(),
+      instagram_handle: z.string().trim().max(100).optional().nullable(),
+      proof_notes: z.string().trim().max(500).optional().nullable(),
+    })
+    .optional(),
+}).superRefine((data, ctx) => {
+  if (data.account_type === "personal" && !data.trainer_application) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["trainer_application"],
+      message: "Informe os dados para validar seu cadastro como personal",
+    });
+  }
 });
 
 const loginSchema = z.object({
@@ -52,10 +71,25 @@ router.post(
             entryDate: new Date(),
           },
         },
+        trainerApplication:
+          data.account_type === "personal"
+            ? {
+                create: {
+                  fullName: data.full_name,
+                  cref: data.trainer_application?.cref ?? "",
+                  crefState: data.trainer_application?.cref_state ?? "",
+                  specialties: data.trainer_application?.specialties ?? null,
+                  experienceYears: data.trainer_application?.experience_years ?? null,
+                  instagramHandle: data.trainer_application?.instagram_handle ?? null,
+                  proofNotes: data.trainer_application?.proof_notes ?? null,
+                },
+              }
+            : undefined,
       },
       include: {
         profile: true,
         roles: true,
+        trainerApplication: true,
       },
     });
 
@@ -88,7 +122,14 @@ router.post(
     return res.status(201).json({
       token,
       user: serializeUser(user, user.roles.map((role) => role.role)),
-      profile: user.profile ? serializeProfile(user.profile, user.email) : null,
+      profile: user.profile
+        ? serializeProfile(user.profile, user.email, {
+            isAdmin: user.roles.some((role) => role.role === UserRole.ADMIN),
+            isPersonalTrainer: user.roles.some((role) => role.role === UserRole.PERSONAL_TRAINER),
+            trainerApplicationStatus: user.trainerApplication?.status ?? null,
+            trainerApplicationId: user.trainerApplication?.id ?? null,
+          })
+        : null,
     });
   }),
 );
@@ -102,6 +143,7 @@ router.post(
       include: {
         profile: true,
         roles: true,
+        trainerApplication: true,
       },
     });
 
@@ -124,7 +166,14 @@ router.post(
     return res.json({
       token,
       user: serializeUser(user, roles),
-      profile: user.profile ? serializeProfile(user.profile, user.email, roles.includes(UserRole.ADMIN)) : null,
+      profile: user.profile
+        ? serializeProfile(user.profile, user.email, {
+            isAdmin: roles.includes(UserRole.ADMIN),
+            isPersonalTrainer: roles.includes(UserRole.PERSONAL_TRAINER),
+            trainerApplicationStatus: user.trainerApplication?.status ?? null,
+            trainerApplicationId: user.trainerApplication?.id ?? null,
+          })
+        : null,
     });
   }),
 );
@@ -138,6 +187,7 @@ router.get(
       include: {
         profile: true,
         roles: true,
+        trainerApplication: true,
       },
     });
 
@@ -149,7 +199,14 @@ router.get(
 
     return res.json({
       user: serializeUser(user, roles),
-      profile: user.profile ? serializeProfile(user.profile, user.email, roles.includes(UserRole.ADMIN)) : null,
+      profile: user.profile
+        ? serializeProfile(user.profile, user.email, {
+            isAdmin: roles.includes(UserRole.ADMIN),
+            isPersonalTrainer: roles.includes(UserRole.PERSONAL_TRAINER),
+            trainerApplicationStatus: user.trainerApplication?.status ?? null,
+            trainerApplicationId: user.trainerApplication?.id ?? null,
+          })
+        : null,
     });
   }),
 );

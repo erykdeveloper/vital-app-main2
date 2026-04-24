@@ -24,6 +24,7 @@ import Premium from "@/pages/Premium";
 import Appointments from "@/pages/Appointments";
 import Settings from "@/pages/Settings";
 import Profile from "@/pages/Profile";
+import TrainerDashboard from "@/pages/TrainerDashboard";
 import AdminAppointments from "@/pages/admin/AdminAppointments";
 
 import BodyProgress from "@/pages/BodyProgress";
@@ -74,6 +75,7 @@ const router = createBrowserRouter([
       { path: "injectables/new", element: <NewInjectable /> },
       { path: "premium", element: <Premium /> },
       { path: "appointments", element: <Appointments /> },
+      { path: "trainer", element: <TrainerDashboard /> },
       { path: "settings", element: <Settings /> },
       { path: "profile", element: <Profile /> },
       { path: "body-progress", element: <BodyProgress /> },
