@@ -69,6 +69,8 @@ export interface TrainerApplication {
   experience_years: number | null;
   instagram_handle: string | null;
   proof_notes: string | null;
+  self_photo_url: string | null;
+  document_photo_url: string | null;
   rejection_reason: string | null;
   created_at: string;
   reviewed_at: string | null;

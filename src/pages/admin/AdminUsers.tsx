@@ -34,6 +34,14 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
+
+function getUploadUrl(path: string | null) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  return `${apiOrigin}${path}`;
+}
+
 export default function AdminUsers() {
   const { data: profiles, isLoading } = useAllProfiles();
   const updatePremium = useUpdateUserPremium();
@@ -203,6 +211,23 @@ export default function AdminUsers() {
                       {application.proof_notes && (
                         <p className="text-sm text-muted-foreground">Comprovação: {application.proof_notes}</p>
                       )}
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {[
+                          { label: 'Foto do personal', url: getUploadUrl(application.self_photo_url) },
+                          { label: 'Documento/CREF', url: getUploadUrl(application.document_photo_url) },
+                        ].map((proof) => (
+                          <div key={proof.label} className="rounded-xl border border-border bg-background/30 p-3">
+                            <p className="mb-2 text-xs font-medium text-muted-foreground">{proof.label}</p>
+                            {proof.url ? (
+                              <a href={proof.url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-border">
+                                <img src={proof.url} alt={proof.label} className="h-36 w-full object-cover transition-transform hover:scale-105" />
+                              </a>
+                            ) : (
+                              <p className="text-sm text-destructive">Arquivo não enviado</p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="flex gap-2">

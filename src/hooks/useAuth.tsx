@@ -1,30 +1,32 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { api, BackendUser, clearStoredAuthSession, getStoredAuthSession, persistAuthSession } from '@/lib/api';
 
+interface RegisterPayload {
+  full_name: string;
+  email: string;
+  phone?: string | null;
+  age: number;
+  height_cm: number;
+  weight_kg: number;
+  password: string;
+  terms_accepted: boolean;
+  account_type?: 'client' | 'personal';
+  trainer_application?: {
+    cref: string;
+    cref_state: string;
+    specialties?: string | null;
+    experience_years?: number | null;
+    instagram_handle?: string | null;
+    proof_notes?: string | null;
+  };
+}
+
 interface AuthContextType {
   user: BackendUser | null;
   session: { token: string } | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  register: (payload: {
-    full_name: string;
-    email: string;
-    phone?: string | null;
-    age: number;
-    height_cm: number;
-    weight_kg: number;
-    password: string;
-    terms_accepted: boolean;
-    account_type?: 'client' | 'personal';
-    trainer_application?: {
-      cref: string;
-      cref_state: string;
-      specialties?: string | null;
-      experience_years?: number | null;
-      instagram_handle?: string | null;
-      proof_notes?: string | null;
-    };
-  }) => Promise<void>;
+  register: (payload: RegisterPayload | FormData) => Promise<void>;
   signOut: () => Promise<void>;
   refreshAuth: () => Promise<void>;
 }
@@ -83,25 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
 
-  const register = async (payload: {
-    full_name: string;
-    email: string;
-    phone?: string | null;
-    age: number;
-    height_cm: number;
-    weight_kg: number;
-    password: string;
-    terms_accepted: boolean;
-    account_type?: 'client' | 'personal';
-    trainer_application?: {
-      cref: string;
-      cref_state: string;
-      specialties?: string | null;
-      experience_years?: number | null;
-      instagram_handle?: string | null;
-      proof_notes?: string | null;
-    };
-  }) => {
+  const register = async (payload: RegisterPayload | FormData) => {
     const response = await api.post<{ token: string; user: BackendUser }>('/auth/register', payload, false);
 
     persistAuthSession(response.token, response.user);

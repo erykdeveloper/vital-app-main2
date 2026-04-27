@@ -9,6 +9,29 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+const acceptedProofTypes = ['image/jpeg', 'image/png', 'image/webp'];
+const maxProofFileSize = 5 * 1024 * 1024;
+const validBrazilianStates = [
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+];
+
+function isValidCref(cref: string, state: string) {
+  const normalizedCref = cref.trim().toUpperCase().replace(/\s+/g, '');
+  const normalizedState = state.trim().toUpperCase();
+  const match = normalizedCref.match(/^(\d{4,6})(?:-?[GP])?(?:\/([A-Z]{2}))?$/);
+
+  return Boolean(
+    match &&
+      validBrazilianStates.includes(normalizedState) &&
+      (!match[1] || !match[2] || match[2] === normalizedState),
+  );
+}
+
+function validateProofFile(file: File | null) {
+  return Boolean(file && acceptedProofTypes.includes(file.type) && file.size <= maxProofFileSize);
+}
+
 export default function Register() {
   const [formData, setFormData] = useState({
     full_name: '',
@@ -31,6 +54,8 @@ export default function Register() {
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [selfPhoto, setSelfPhoto] = useState<File | null>(null);
+  const [documentPhoto, setDocumentPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading, register } = useAuth();
@@ -98,6 +123,18 @@ export default function Register() {
         toast({ variant: 'destructive', title: 'Informe CREF e UF para solicitar acesso de personal' });
         return false;
       }
+      if (!isValidCref(formData.cref, formData.cref_state)) {
+        toast({ variant: 'destructive', title: 'Informe um CREF válido com UF correspondente' });
+        return false;
+      }
+      if (!validateProofFile(selfPhoto)) {
+        toast({ variant: 'destructive', title: 'Envie uma foto sua em JPG, PNG ou WebP até 5MB' });
+        return false;
+      }
+      if (!validateProofFile(documentPhoto)) {
+        toast({ variant: 'destructive', title: 'Envie uma foto do documento em JPG, PNG ou WebP até 5MB' });
+        return false;
+      }
       if (!formData.proof_notes.trim()) {
         toast({ variant: 'destructive', title: 'Explique sua comprovação profissional' });
         return false;
@@ -126,7 +163,35 @@ export default function Register() {
 
     try {
       const weightValue = parseFloat(formData.weight_kg.replace(',', '.'));
-      await register({
+      const trainerApplication =
+        accountType === 'personal'
+          ? {
+              cref: formData.cref.trim(),
+              cref_state: formData.cref_state.trim().toUpperCase(),
+              specialties: formData.specialties.trim() || null,
+              experience_years: formData.experience_years ? Number(formData.experience_years) : null,
+              instagram_handle: formData.instagram_handle.trim() || null,
+              proof_notes: formData.proof_notes.trim() || null,
+            }
+          : undefined;
+
+      if (accountType === 'personal') {
+        const payload = new FormData();
+        payload.append('full_name', formData.full_name.trim());
+        payload.append('email', formData.email.trim());
+        payload.append('phone', formData.phone.trim() || '');
+        payload.append('age', String(Number(formData.age)));
+        payload.append('height_cm', String(Number(formData.height_cm)));
+        payload.append('weight_kg', String(weightValue));
+        payload.append('password', formData.password);
+        payload.append('terms_accepted', String(termsAccepted));
+        payload.append('account_type', accountType);
+        payload.append('trainer_application', JSON.stringify(trainerApplication));
+        payload.append('self_photo', selfPhoto!);
+        payload.append('document_photo', documentPhoto!);
+        await register(payload);
+      } else {
+        await register({
         full_name: formData.full_name.trim(),
         email: formData.email.trim(),
         phone: formData.phone.trim() || null,
@@ -136,18 +201,9 @@ export default function Register() {
         password: formData.password,
         terms_accepted: termsAccepted,
         account_type: accountType,
-        trainer_application:
-          accountType === 'personal'
-            ? {
-                cref: formData.cref.trim(),
-                cref_state: formData.cref_state.trim().toUpperCase(),
-                specialties: formData.specialties.trim() || null,
-                experience_years: formData.experience_years ? Number(formData.experience_years) : null,
-                instagram_handle: formData.instagram_handle.trim() || null,
-                proof_notes: formData.proof_notes.trim() || null,
-              }
-            : undefined,
-      });
+        trainer_application: trainerApplication,
+        });
+      }
 
       toast({
         title: accountType === 'personal' ? 'Solicitação enviada!' : 'Conta criada com sucesso!',
@@ -431,7 +487,7 @@ export default function Register() {
                     name="cref"
                     value={formData.cref}
                     onChange={handleChange}
-                    placeholder="Ex.: 123456-G/SP"
+                    placeholder="Ex.: 123456-G"
                     className="bg-input border-border"
                   />
                 </div>
@@ -497,6 +553,31 @@ export default function Register() {
                   placeholder="Explique sua atuação, nicho e dados para validação"
                   className="bg-input border-border"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="self_photo">Foto sua</Label>
+                  <Input
+                    id="self_photo"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => setSelfPhoto(event.target.files?.[0] ?? null)}
+                    className="bg-input border-border"
+                  />
+                  <p className="text-xs text-muted-foreground">Rosto visível, JPG/PNG/WebP até 5MB.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="document_photo">Foto do documento</Label>
+                  <Input
+                    id="document_photo"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(event) => setDocumentPhoto(event.target.files?.[0] ?? null)}
+                    className="bg-input border-border"
+                  />
+                  <p className="text-xs text-muted-foreground">Documento/CREF legível, JPG/PNG/WebP até 5MB.</p>
+                </div>
               </div>
             </div>
           )}

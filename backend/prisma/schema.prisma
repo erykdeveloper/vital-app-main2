@@ -327,6 +327,8 @@ model TrainerApplication {
   experienceYears Int?
   instagramHandle String?
   proofNotes      String?
+  selfPhotoUrl    String?
+  documentPhotoUrl String?
   reviewedAt      DateTime?
   reviewedBy      String?                  @db.Uuid
   rejectionReason String?

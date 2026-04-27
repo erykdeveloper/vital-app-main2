@@ -211,6 +211,8 @@ router.get(
         experience_years: application.experienceYears,
         instagram_handle: application.instagramHandle,
         proof_notes: application.proofNotes,
+        self_photo_url: application.selfPhotoUrl,
+        document_photo_url: application.documentPhotoUrl,
         rejection_reason: application.rejectionReason,
         created_at: application.createdAt,
         reviewed_at: application.reviewedAt,
@@ -241,6 +243,10 @@ router.patch(
     }
 
     if (data.decision === "approve") {
+      if (!application.selfPhotoUrl || !application.documentPhotoUrl) {
+        return res.status(400).json({ message: "A solicitacao precisa ter foto do personal e foto do documento" });
+      }
+
       await prisma.$transaction([
         prisma.trainerApplication.update({
           where: { id: applicationId },

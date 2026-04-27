@@ -1,7 +1,12 @@
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { UserRole } from "@prisma/client";
+import multer from "multer";
 import { z } from "zod";
+import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 import { signToken } from "../lib/jwt.js";
 import { asyncHandler } from "../utils/async-handler.js";
@@ -10,28 +15,85 @@ import { serializeProfile, serializeUser } from "../utils/serializers.js";
 
 const router = Router();
 
+const trainerProofUploadDir = path.join(env.UPLOAD_DIR, "trainer-applications");
+fs.mkdirSync(trainerProofUploadDir, { recursive: true });
+
+const allowedProofMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+const trainerProofUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, callback) => callback(null, trainerProofUploadDir),
+    filename: (_req, file, callback) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+      callback(null, `${crypto.randomUUID()}${ext}`);
+    },
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedProofMimeTypes.has(file.mimetype)) {
+      callback(new Error("Envie imagens JPG, PNG ou WebP para a comprovacao do personal"));
+      return;
+    }
+
+    callback(null, true);
+  },
+});
+
+function parseMaybeJson(value: unknown) {
+  if (typeof value !== "string") return value;
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function parseBoolean(value: unknown) {
+  return value === true || value === "true";
+}
+
+const validBrazilianStates = new Set([
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+]);
+
+function validateCref(cref: string, state: string) {
+  const normalizedCref = cref.trim().toUpperCase().replace(/\s+/g, "");
+  const normalizedState = state.trim().toUpperCase();
+  const match = normalizedCref.match(/^(\d{4,6})(?:-?[GP])?(?:\/([A-Z]{2}))?$/);
+
+  return Boolean(
+    match &&
+      validBrazilianStates.has(normalizedState) &&
+      (!match[2] || match[2] === normalizedState),
+  );
+}
+
 const registerSchema = z.object({
   full_name: z.string().min(3),
   email: z.string().email(),
   phone: z.string().optional().nullable(),
-  age: z.number().int().positive(),
-  height_cm: z.number().int().positive(),
-  weight_kg: z.number().positive(),
+  age: z.coerce.number().int().positive(),
+  height_cm: z.coerce.number().int().positive(),
+  weight_kg: z.coerce.number().positive(),
   password: z.string().min(6),
-  terms_accepted: z.literal(true, {
+  terms_accepted: z.preprocess(parseBoolean, z.literal(true, {
     errorMap: () => ({ message: "Aceite os Termos de Uso para criar sua conta" }),
-  }),
+  })),
   account_type: z.enum(["client", "personal"]).default("client"),
-  trainer_application: z
+  trainer_application: z.preprocess(parseMaybeJson, z
     .object({
       cref: z.string().min(3),
       cref_state: z.string().min(2).max(2),
       specialties: z.string().trim().max(200).optional().nullable(),
-      experience_years: z.number().int().min(0).max(80).optional().nullable(),
+      experience_years: z.coerce.number().int().min(0).max(80).optional().nullable(),
       instagram_handle: z.string().trim().max(100).optional().nullable(),
       proof_notes: z.string().trim().max(500).optional().nullable(),
     })
-    .optional(),
+    .optional()),
 }).superRefine((data, ctx) => {
   if (data.account_type === "personal" && !data.trainer_application) {
     ctx.addIssue({
@@ -39,6 +101,17 @@ const registerSchema = z.object({
       path: ["trainer_application"],
       message: "Informe os dados para validar seu cadastro como personal",
     });
+  }
+
+  if (data.account_type === "personal" && data.trainer_application) {
+    const { cref, cref_state: crefState } = data.trainer_application;
+    if (!validateCref(cref, crefState)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["trainer_application", "cref"],
+        message: "Informe um CREF valido com UF correspondente",
+      });
+    }
   }
 });
 
@@ -49,8 +122,25 @@ const loginSchema = z.object({
 
 router.post(
   "/register",
+  trainerProofUpload.fields([
+    { name: "self_photo", maxCount: 1 },
+    { name: "document_photo", maxCount: 1 },
+  ]),
   asyncHandler(async (req, res) => {
     const data = registerSchema.parse(req.body);
+    const files = req.files as
+      | {
+          self_photo?: Express.Multer.File[];
+          document_photo?: Express.Multer.File[];
+        }
+      | undefined;
+    const selfPhoto = files?.self_photo?.[0] ?? null;
+    const documentPhoto = files?.document_photo?.[0] ?? null;
+
+    if (data.account_type === "personal" && (!selfPhoto || !documentPhoto)) {
+      return res.status(400).json({ message: "Envie sua foto e a foto do documento para validar o personal" });
+    }
+
     const existing = await prisma.user.findUnique({
       where: { email: data.email.toLowerCase() },
     });
@@ -68,7 +158,7 @@ router.post(
           profile: {
             create: {
               fullName: data.full_name,
-              phone: data.phone ?? null,
+              phone: data.phone || null,
               age: data.age,
               heightCm: data.height_cm,
               weightKg: data.weight_kg.toString(),
@@ -86,6 +176,8 @@ router.post(
                     experienceYears: data.trainer_application?.experience_years ?? null,
                     instagramHandle: data.trainer_application?.instagram_handle ?? null,
                     proofNotes: data.trainer_application?.proof_notes ?? null,
+                    selfPhotoUrl: selfPhoto ? `/uploads/trainer-applications/${selfPhoto.filename}` : null,
+                    documentPhotoUrl: documentPhoto ? `/uploads/trainer-applications/${documentPhoto.filename}` : null,
                   },
                 }
               : undefined,
