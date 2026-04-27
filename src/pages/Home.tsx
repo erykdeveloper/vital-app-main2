@@ -1,25 +1,41 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
+  BarChart3,
+  CalendarCheck,
   Flame,
-  Footprints,
   Heart,
   Search,
   Sparkles,
   Target,
   TrendingUp,
   Trophy,
+  UserCircle2,
   Zap,
 } from "lucide-react";
 import { format, eachDayOfInterval, endOfWeek, isSameDay, parseISO, startOfMonth, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
-import { useWeeklyProgress } from "@/hooks/useWeeklyProgress";
-import { fetchCardioWorkouts, fetchStrengthWorkouts } from "@/lib/workoutApi";
+import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type StrengthWorkoutApi } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
 
 function calculateBMI(weightKg: number, heightCm: number): number {
@@ -34,6 +50,32 @@ function clampPercentage(value: number): number {
 
 function formatNumber(value: number) {
   return new Intl.NumberFormat("pt-BR").format(Math.round(value));
+}
+
+function getWorkoutDate(workout: WorkoutEntry) {
+  return parseISO(workout.date);
+}
+
+function sumCalories(workouts: WorkoutEntry[]) {
+  return workouts.reduce((sum, workout) => sum + (workout.calories ?? 0), 0);
+}
+
+function sumMinutes(workouts: WorkoutEntry[]) {
+  return workouts.reduce((sum, workout) => sum + (workout.duration_min ?? 0), 0);
+}
+
+function countUniqueWorkoutDays(workouts: WorkoutEntry[]) {
+  return new Set(workouts.map((workout) => workout.date.slice(0, 10))).size;
+}
+
+function getTrendLabel(current: number, previous: number) {
+  if (previous === 0) {
+    return current > 0 ? "novo" : undefined;
+  }
+
+  const change = Math.round(((current - previous) / previous) * 100);
+  if (change === 0) return "0%";
+  return `${change > 0 ? "+" : ""}${change}%`;
 }
 
 function getInitials(name?: string | null): string {
@@ -226,23 +268,53 @@ function RecommendationCard({
 
 interface DashboardData {
   weeklyMinutes: number[];
+  weeklyWorkoutCounts: number[];
+  todayWorkouts: number;
+  todayMinutes: number;
   monthlyCalories: number;
   monthlyWorkouts: number;
+  monthlyMinutes: number;
   weeklyCalories: number;
+  weeklyWorkouts: number;
+  weeklyWorkoutDays: number;
+  previousWeekCalories: number;
+  previousWeekWorkouts: number;
 }
 
 const initialDashboardData: DashboardData = {
   weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
+  weeklyWorkoutCounts: [0, 0, 0, 0, 0, 0, 0],
+  todayWorkouts: 0,
+  todayMinutes: 0,
   monthlyCalories: 0,
   monthlyWorkouts: 0,
+  monthlyMinutes: 0,
   weeklyCalories: 0,
+  weeklyWorkouts: 0,
+  weeklyWorkoutDays: 0,
+  previousWeekCalories: 0,
+  previousWeekWorkouts: 0,
 };
 
+type WorkoutEntry = StrengthWorkoutApi | CardioWorkoutApi;
+
+const searchItems = [
+  { label: "Perfil", description: "Dados pessoais e avatar", to: "/profile", icon: UserCircle2 },
+  { label: "Configurações", description: "Editar cadastro e medidas", to: "/settings", icon: UserCircle2 },
+  { label: "Treinos", description: "Registrar uma nova atividade", to: "/workouts", icon: Zap },
+  { label: "Histórico de treinos", description: "Ver treinos registrados", to: "/workouts/history", icon: BarChart3 },
+  { label: "Estatísticas", description: "Relatórios e evolução", to: "/workouts/dashboard", icon: BarChart3 },
+  { label: "Conquistas", description: "Badges desbloqueados", to: "/premium", icon: Trophy },
+  { label: "Agendamentos", description: "Consultas e bioimpedância", to: "/appointments", icon: CalendarCheck },
+];
+
 export default function Home() {
+  const navigate = useNavigate();
   const { profile, loading } = useProfile();
-  const { completed, goal, loading: progressLoading } = useWeeklyProgress();
   const { achievements, userAchievements } = useAchievements();
   const [dashboardData, setDashboardData] = useState<DashboardData>(initialDashboardData);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -258,33 +330,55 @@ export default function Home() {
 
         const combined = [...strengthWorkouts, ...cardioWorkouts];
         const now = new Date();
+        const dayStart = new Date(now);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(now);
+        dayEnd.setHours(23, 59, 59, 999);
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        const previousWeekStart = new Date(weekStart);
+        previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+        const previousWeekEnd = new Date(weekEnd);
+        previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
         const monthStart = startOfMonth(now);
         const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
+        const todayWorkouts = combined.filter((workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          return workoutDate >= dayStart && workoutDate <= dayEnd;
+        });
+        const weekWorkouts = combined.filter((workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          return workoutDate >= weekStart && workoutDate <= weekEnd;
+        });
+        const previousWeekWorkouts = combined.filter((workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          return workoutDate >= previousWeekStart && workoutDate <= previousWeekEnd;
+        });
+        const monthWorkouts = combined.filter((workout) => getWorkoutDate(workout) >= monthStart);
+
         const weeklyMinutes = weekDays.map((day) =>
           combined
-            .filter((workout) => isSameDay(parseISO(workout.date), day))
+            .filter((workout) => isSameDay(getWorkoutDate(workout), day))
             .reduce((sum, workout) => sum + (workout.duration_min ?? 0), 0)
         );
-
-        const monthlyWorkouts = combined.filter((workout) => parseISO(workout.date) >= monthStart).length;
-        const monthlyCalories = combined
-          .filter((workout) => parseISO(workout.date) >= monthStart)
-          .reduce((sum, workout) => sum + (workout.calories ?? 0), 0);
-        const weeklyCalories = combined
-          .filter((workout) => {
-            const workoutDate = parseISO(workout.date);
-            return workoutDate >= weekStart && workoutDate <= weekEnd;
-          })
-          .reduce((sum, workout) => sum + (workout.calories ?? 0), 0);
+        const weeklyWorkoutCounts = weekDays.map((day) =>
+          combined.filter((workout) => isSameDay(getWorkoutDate(workout), day)).length
+        );
 
         setDashboardData({
           weeklyMinutes,
-          monthlyCalories,
-          monthlyWorkouts,
-          weeklyCalories,
+          weeklyWorkoutCounts,
+          todayWorkouts: todayWorkouts.length,
+          todayMinutes: sumMinutes(todayWorkouts),
+          monthlyCalories: sumCalories(monthWorkouts),
+          monthlyWorkouts: monthWorkouts.length,
+          monthlyMinutes: sumMinutes(monthWorkouts),
+          weeklyCalories: sumCalories(weekWorkouts),
+          weeklyWorkouts: weekWorkouts.length,
+          weeklyWorkoutDays: countUniqueWorkoutDays(weekWorkouts),
+          previousWeekCalories: sumCalories(previousWeekWorkouts),
+          previousWeekWorkouts: previousWeekWorkouts.length,
         });
       } catch {
         if (active) {
@@ -313,16 +407,58 @@ export default function Home() {
   const initials = getInitials(fullName);
   const bmi = profile ? calculateBMI(Number(profile.weight_kg), Number(profile.height_cm)) : 0;
   const todayLabel = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
-  const progressPercentage = goal > 0 ? clampPercentage((completed / goal) * 100) : 0;
-  const monthlyCaloriesGoal = Math.max(2500, dashboardData.monthlyCalories + 800);
-  const calorieProgress = clampPercentage((dashboardData.monthlyCalories / monthlyCaloriesGoal) * 100);
+  const maxDailyMinutes = Math.max(...dashboardData.weeklyMinutes, dashboardData.todayMinutes, 1);
+  const maxDailyWorkouts = Math.max(...dashboardData.weeklyWorkoutCounts, dashboardData.todayWorkouts, 1);
+  const todayMinuteProgress = clampPercentage((dashboardData.todayMinutes / maxDailyMinutes) * 100);
+  const todayWorkoutProgress = clampPercentage((dashboardData.todayWorkouts / maxDailyWorkouts) * 100);
   const achievementProgress = achievements.length > 0
     ? clampPercentage((userAchievements.length / achievements.length) * 100)
     : 0;
-  const weeklyWorkoutTarget = Math.max(goal, 5);
+  const weeklyDayProgress = clampPercentage((dashboardData.weeklyWorkoutDays / 7) * 100);
+  const calorieTrend = getTrendLabel(dashboardData.weeklyCalories, dashboardData.previousWeekCalories);
+  const workoutTrend = getTrendLabel(dashboardData.weeklyWorkouts, dashboardData.previousWeekWorkouts);
   const weekDays = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sab", "Dom"];
   const currentWeekDay = Math.max(0, Math.min(6, new Date().getDay() === 0 ? 6 : new Date().getDay() - 1));
   const maxMinutes = Math.max(...dashboardData.weeklyMinutes, 1);
+  const filteredSearchItems = searchItems.filter((item) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${item.label} ${item.description}`.toLowerCase().includes(query);
+  });
+  const notifications = [
+    dashboardData.weeklyWorkouts === 0
+      ? {
+          title: "Semana sem treinos",
+          description: "Registre uma atividade para iniciar seu resumo.",
+          to: "/workouts",
+        }
+      : null,
+    dashboardData.todayWorkouts === 0
+      ? {
+          title: "Nenhum treino hoje",
+          description: "Seu progresso diário ainda está zerado.",
+          to: "/workouts",
+        }
+      : {
+          title: "Progresso de hoje",
+          description: `${dashboardData.todayWorkouts} treino(s) e ${formatNumber(dashboardData.todayMinutes)} min registrados.`,
+          to: "/workouts/history",
+        },
+    bmi === 0
+      ? {
+          title: "Perfil incompleto",
+          description: "Atualize peso e altura para calcular o IMC.",
+          to: "/settings",
+        }
+      : null,
+    achievements.length > 0 && userAchievements.length < achievements.length
+      ? {
+          title: "Conquistas pendentes",
+          description: `${achievements.length - userAchievements.length} conquista(s) ainda bloqueadas.`,
+          to: "/premium",
+        }
+      : null,
+  ].filter(Boolean) as Array<{ title: string; description: string; to: string }>;
   const recommendationCards = [
     {
       label: "Cardio",
@@ -360,33 +496,113 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
-            <div className="hidden items-center gap-3 rounded-full border border-white/5 bg-[hsl(var(--secondary))] px-4 py-3 text-sm text-muted-foreground md:flex">
+            <Link
+              to="/profile"
+              className="hidden items-center gap-3 rounded-full border border-white/5 bg-[hsl(var(--secondary))] px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground md:flex"
+              aria-label="Abrir perfil"
+            >
               <Avatar className="h-9 w-9 border border-white/10">
                 <AvatarImage src={profile?.avatar_url || undefined} alt={fullName} />
                 <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
               </Avatar>
               <span className="max-w-[180px] truncate">{fullName}</span>
-            </div>
+            </Link>
 
-            {[Search, Bell].map((Icon, index) => (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Pesquisar"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
               <button
-                key={index}
                 type="button"
                 className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
+                aria-label="Notificações"
               >
-                <Icon className="h-5 w-5" />
-                {Icon === Bell ? <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" /> : null}
+                <Bell className="h-5 w-5" />
+                {notifications.length > 0 ? (
+                  <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
+                ) : null}
               </button>
-            ))}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 rounded-2xl border-white/10 bg-[hsl(var(--card))] p-2">
+                <DropdownMenuLabel>Notificações</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.length > 0 ? (
+                  notifications.map((notification) => (
+                    <DropdownMenuItem
+                      key={notification.title}
+                      className="cursor-pointer items-start rounded-xl p-3"
+                      onClick={() => navigate(notification.to)}
+                    >
+                      <div>
+                        <p className="font-medium">{notification.title}</p>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{notification.description}</p>
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <div className="px-3 py-4 text-sm text-muted-foreground">Tudo em dia por aqui.</div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
+
+        <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+          <DialogContent className="max-w-xl rounded-3xl border-white/10 bg-[hsl(var(--card))] p-5">
+            <DialogHeader>
+              <DialogTitle>Pesquisar</DialogTitle>
+            </DialogHeader>
+            <Input
+              autoFocus
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Buscar no app"
+              className="border-white/10 bg-[hsl(var(--secondary))]"
+            />
+            <div className="grid gap-2">
+              {filteredSearchItems.length > 0 ? (
+                filteredSearchItems.map((item) => (
+                  <button
+                    key={item.to}
+                    type="button"
+                    onClick={() => {
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                      navigate(item.to);
+                    }}
+                    className="flex items-center gap-3 rounded-2xl border border-white/5 bg-background/20 p-3 text-left transition-colors hover:bg-[hsl(var(--secondary))]"
+                  >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                      <item.icon className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block font-medium">{item.label}</span>
+                      <span className="block truncate text-sm text-muted-foreground">{item.description}</span>
+                    </span>
+                  </button>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-white/5 bg-background/20 p-4 text-sm text-muted-foreground">
+                  Nenhum resultado encontrado.
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <section className="grid gap-4 xl:grid-cols-4">
           <TopMetricCard
             icon={Flame}
             title="Calorias"
             value={formatNumber(dashboardData.monthlyCalories)}
-            helper={`de ${formatNumber(monthlyCaloriesGoal)} kcal neste mês`}
+            helper={`${formatNumber(dashboardData.monthlyMinutes)} min ativos neste mês`}
             highlight
           />
           <TopMetricCard
@@ -421,8 +637,8 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <CircularProgress value={calorieProgress} label="Calorias" />
-              <CircularProgress value={progressPercentage} label="Treinos" />
+              <CircularProgress value={todayMinuteProgress} label={`${formatNumber(dashboardData.todayMinutes)} min hoje`} />
+              <CircularProgress value={todayWorkoutProgress} label={`${dashboardData.todayWorkouts} treinos hoje`} />
             </div>
           </div>
 
@@ -440,7 +656,7 @@ export default function Home() {
 
             <div className="flex min-h-[230px] items-end justify-between gap-3 md:gap-6">
               {dashboardData.weeklyMinutes.map((minutes, index) => {
-                const height = Math.max(36, Math.round((minutes / maxMinutes) * 108));
+                const height = minutes > 0 ? Math.max(18, Math.round((minutes / maxMinutes) * 108)) : 0;
                 const isCurrent = index === currentWeekDay;
 
                 return (
@@ -448,7 +664,8 @@ export default function Home() {
                     <div
                       className={cn(
                         "w-full max-w-[42px] rounded-t-[1.6rem] transition-all duration-300",
-                        isCurrent ? "gold-highlight" : "bg-[hsl(var(--secondary))]"
+                        minutes > 0 && isCurrent ? "gold-highlight" : "bg-[hsl(var(--secondary))]",
+                        minutes === 0 ? "opacity-35" : ""
                       )}
                       style={{ height: `${height}px` }}
                     />
@@ -466,7 +683,7 @@ export default function Home() {
 
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-semibold">Metas da Semana</h2>
+            <h2 className="text-2xl font-semibold">Resumo da Semana</h2>
             <Link to="/workouts/dashboard" className="text-lg font-medium text-primary">
               Ver todas
             </Link>
@@ -476,21 +693,25 @@ export default function Home() {
             <GoalCard
               title="Calorias Queimadas"
               value={formatNumber(dashboardData.weeklyCalories)}
-              helper={`/ ${formatNumber(1800)} kcal`}
-              progress={(dashboardData.weeklyCalories / 1800) * 100}
-              trend="+12%"
+              helper={`semana anterior: ${formatNumber(dashboardData.previousWeekCalories)} kcal`}
+              progress={
+                Math.max(dashboardData.weeklyCalories, dashboardData.previousWeekCalories) > 0
+                  ? (dashboardData.weeklyCalories / Math.max(dashboardData.weeklyCalories, dashboardData.previousWeekCalories)) * 100
+                  : 0
+              }
+              trend={calorieTrend}
             />
             <GoalCard
               title="Treinos Completados"
-              value={String(completed)}
-              helper={`/ ${weeklyWorkoutTarget} treinos`}
-              progress={(completed / weeklyWorkoutTarget) * 100}
-              trend={progressLoading ? undefined : "+8%"}
+              value={String(dashboardData.weeklyWorkouts)}
+              helper={`${dashboardData.weeklyWorkoutDays} de 7 dias com treino`}
+              progress={weeklyDayProgress}
+              trend={workoutTrend}
             />
             <GoalCard
               title="Conquistas Liberadas"
               value={String(userAchievements.length)}
-              helper={achievements.length > 0 ? `/ ${achievements.length} badges` : "/ catálogo"}
+              helper={achievements.length > 0 ? `de ${achievements.length} conquistas` : "catálogo em atualização"}
               progress={achievementProgress}
             />
           </div>

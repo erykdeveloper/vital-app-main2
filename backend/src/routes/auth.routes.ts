@@ -57,40 +57,42 @@ router.post(
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
-    const user = await prisma.user.create({
-      data: {
-        email: data.email.toLowerCase(),
-        passwordHash,
-        profile: {
-          create: {
-            fullName: data.full_name,
-            phone: data.phone ?? null,
-            age: data.age,
-            heightCm: data.height_cm,
-            weightKg: data.weight_kg.toString(),
-            entryDate: new Date(),
+    const user = await prisma.$transaction(async (tx) => {
+      return tx.user.create({
+        data: {
+          email: data.email.toLowerCase(),
+          passwordHash,
+          profile: {
+            create: {
+              fullName: data.full_name,
+              phone: data.phone ?? null,
+              age: data.age,
+              heightCm: data.height_cm,
+              weightKg: data.weight_kg.toString(),
+              entryDate: new Date(),
+            },
           },
+          trainerApplication:
+            data.account_type === "personal"
+              ? {
+                  create: {
+                    fullName: data.full_name,
+                    cref: data.trainer_application?.cref ?? "",
+                    crefState: data.trainer_application?.cref_state ?? "",
+                    specialties: data.trainer_application?.specialties ?? null,
+                    experienceYears: data.trainer_application?.experience_years ?? null,
+                    instagramHandle: data.trainer_application?.instagram_handle ?? null,
+                    proofNotes: data.trainer_application?.proof_notes ?? null,
+                  },
+                }
+              : undefined,
         },
-        trainerApplication:
-          data.account_type === "personal"
-            ? {
-                create: {
-                  fullName: data.full_name,
-                  cref: data.trainer_application?.cref ?? "",
-                  crefState: data.trainer_application?.cref_state ?? "",
-                  specialties: data.trainer_application?.specialties ?? null,
-                  experienceYears: data.trainer_application?.experience_years ?? null,
-                  instagramHandle: data.trainer_application?.instagram_handle ?? null,
-                  proofNotes: data.trainer_application?.proof_notes ?? null,
-                },
-              }
-            : undefined,
-      },
-      include: {
-        profile: true,
-        roles: true,
-        trainerApplication: true,
-      },
+        include: {
+          profile: true,
+          roles: true,
+          trainerApplication: true,
+        },
+      });
     });
 
     const token = signToken({
@@ -98,26 +100,6 @@ router.post(
       email: user.email,
       roles: user.roles.map((role) => role.role),
     });
-
-    const achievement = await prisma.achievement.findFirst({
-      where: { name: { equals: "Mudanca de Vida", mode: "insensitive" } },
-    });
-
-    if (achievement) {
-      await prisma.userAchievement.upsert({
-        where: {
-          userId_achievementId: {
-            userId: user.id,
-            achievementId: achievement.id,
-          },
-        },
-        update: {},
-        create: {
-          userId: user.id,
-          achievementId: achievement.id,
-        },
-      });
-    }
 
     return res.status(201).json({
       token,

@@ -32,6 +32,40 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return value as Prisma.InputJsonValue;
 }
 
+async function awardAchievementByName(userId: string, name: string) {
+  const achievement = await prisma.achievement.findFirst({
+    where: { name: { equals: name, mode: "insensitive" } },
+    select: { id: true },
+  });
+
+  if (!achievement) return;
+
+  await prisma.userAchievement.upsert({
+    where: {
+      userId_achievementId: {
+        userId,
+        achievementId: achievement.id,
+      },
+    },
+    update: {},
+    create: {
+      userId,
+      achievementId: achievement.id,
+    },
+  });
+}
+
+async function awardFirstWorkoutAchievementIfNeeded(userId: string) {
+  const [strengthCount, cardioCount] = await Promise.all([
+    prisma.workout.count({ where: { userId } }),
+    prisma.cardioWorkout.count({ where: { userId } }),
+  ]);
+
+  if (strengthCount + cardioCount === 1) {
+    await awardAchievementByName(userId, "Primeiro Treino");
+  }
+}
+
 router.get(
   "/strength",
   requireAuth,
@@ -61,6 +95,8 @@ router.post(
         exercises: toJsonValue(data.exercises),
       },
     });
+
+    await awardFirstWorkoutAchievementIfNeeded(req.auth!.userId);
 
     return res.status(201).json({ workout });
   }),
@@ -159,6 +195,8 @@ router.post(
         notes: data.notes ?? null,
       },
     });
+
+    await awardFirstWorkoutAchievementIfNeeded(req.auth!.userId);
 
     return res.status(201).json({ cardio_workout: cardioWorkout });
   }),
