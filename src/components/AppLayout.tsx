@@ -55,7 +55,7 @@ export function AppLayout() {
       <button
         type="button"
         onClick={() => void handleSignOut()}
-        className="fixed right-4 top-4 z-50 inline-flex items-center gap-2 rounded-full border border-red-400/30 bg-[#2d123b]/95 px-4 py-2 text-sm font-medium text-red-300 shadow-lg backdrop-blur transition-colors hover:bg-[#3a174d] hover:text-red-200 md:right-8 md:top-6"
+        className="fixed right-4 top-4 z-50 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/30 bg-[#2d123b]/95 px-4 text-sm font-medium text-red-300 shadow-lg backdrop-blur transition-colors hover:bg-[#3a174d] hover:text-red-200 md:right-6 md:top-8"
       >
         <LogOut className="h-4 w-4" />
         <span className="hidden sm:inline">Sair</span>

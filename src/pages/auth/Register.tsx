@@ -178,8 +178,8 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col p-6">
-      <div className="w-full max-w-sm mx-auto space-y-6">
+    <div className="h-screen overflow-y-auto bg-background px-6 py-8">
+      <div className="w-full max-w-sm mx-auto space-y-6 pb-12">
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="w-6 h-6" />
