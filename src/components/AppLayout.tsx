@@ -52,15 +52,6 @@ export function AppLayout() {
 
   return (
     <div className="app-container md:bg-[#24102e] md:p-2">
-      <button
-        type="button"
-        onClick={() => void handleSignOut()}
-        className="fixed right-4 top-4 z-50 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/30 bg-[#2d123b]/95 px-4 text-sm font-medium text-red-300 shadow-lg backdrop-blur transition-colors hover:bg-[#3a174d] hover:text-red-200 md:right-6 md:top-8"
-      >
-        <LogOut className="h-4 w-4" />
-        <span className="hidden sm:inline">Sair</span>
-      </button>
-
       <aside className="hidden w-[330px] shrink-0 rounded-[2rem] border border-white/5 bg-[#24102e] md:flex md:flex-col md:justify-between md:px-7 md:py-6">
         <div className="space-y-10">
           <div className="flex items-center gap-3">
@@ -106,12 +97,28 @@ export function AppLayout() {
               </div>
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => void handleSignOut()}
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-red-400/30 bg-[#2d123b]/70 px-4 text-sm font-medium text-red-300 transition-colors hover:bg-[#3a174d] hover:text-red-200"
+          >
+            <LogOut className="h-4 w-4" />
+            Sair
+          </button>
         </div>
       </aside>
 
       <main className="app-content hide-scrollbar rounded-[2rem] pb-20 md:pb-0">
         <Outlet />
       </main>
+      <button
+        type="button"
+        onClick={() => void handleSignOut()}
+        className="fixed right-4 top-4 z-50 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/30 bg-[#2d123b]/95 px-4 text-sm font-medium text-red-300 shadow-lg backdrop-blur transition-colors hover:bg-[#3a174d] hover:text-red-200 md:hidden"
+      >
+        <LogOut className="h-4 w-4" />
+        <span className="hidden sm:inline">Sair</span>
+      </button>
       <BottomNav />
     </div>
   );

@@ -56,7 +56,7 @@ export const getWeeksOfMonth = (year: number, month: number, workouts: Workout[]
   const lastDay = new Date(year, month + 1, 0);
   
   // Start from the first day of the month
-  let weekStart = new Date(firstDay);
+  const weekStart = new Date(firstDay);
   // Adjust to start from Sunday
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
   
