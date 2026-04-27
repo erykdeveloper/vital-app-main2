@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
 import { Eye, EyeOff, Heart, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -29,6 +30,7 @@ export default function Register() {
   const [selectedPlan, setSelectedPlan] = useState<'essential' | 'premium'>('premium');
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading, register } = useAuth();
@@ -87,6 +89,10 @@ export default function Register() {
       toast({ variant: 'destructive', title: 'As senhas não coincidem' });
       return false;
     }
+    if (!termsAccepted) {
+      toast({ variant: 'destructive', title: 'Aceite os Termos de Uso para continuar' });
+      return false;
+    }
     if (accountType === 'personal') {
       if (!formData.cref.trim() || !formData.cref_state.trim()) {
         toast({ variant: 'destructive', title: 'Informe CREF e UF para solicitar acesso de personal' });
@@ -128,6 +134,7 @@ export default function Register() {
         height_cm: Number(formData.height_cm),
         weight_kg: weightValue,
         password: formData.password,
+        terms_accepted: termsAccepted,
         account_type: accountType,
         trainer_application:
           accountType === 'personal'
@@ -493,6 +500,22 @@ export default function Register() {
               </div>
             </div>
           )}
+
+          <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/60 p-4">
+            <Checkbox
+              id="termsAccepted"
+              checked={termsAccepted}
+              onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+              className="mt-1"
+            />
+            <Label htmlFor="termsAccepted" className="cursor-pointer text-sm leading-relaxed text-muted-foreground">
+              Li e aceito os{' '}
+              <Link to="/termos-de-uso" target="_blank" className="font-medium text-accent hover:underline">
+                Termos de Uso
+              </Link>{' '}
+              da Vitalissy.
+            </Label>
+          </div>
 
           <Button
             type="submit"

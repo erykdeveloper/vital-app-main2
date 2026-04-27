@@ -14,6 +14,7 @@ interface AuthContextType {
     height_cm: number;
     weight_kg: number;
     password: string;
+    terms_accepted: boolean;
     account_type?: 'client' | 'personal';
     trainer_application?: {
       cref: string;
@@ -90,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     height_cm: number;
     weight_kg: number;
     password: string;
+    terms_accepted: boolean;
     account_type?: 'client' | 'personal';
     trainer_application?: {
       cref: string;

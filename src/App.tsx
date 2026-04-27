@@ -9,6 +9,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 import { AppLayout } from "@/components/AppLayout";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
+import Terms from "@/pages/Terms";
 import Home from "@/pages/Home";
 import Workouts from "@/pages/Workouts";
 import WorkoutForm from "@/pages/workouts/WorkoutForm";
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
   {
     path: "/registro",
     element: <Register />,
+  },
+  {
+    path: "/termos-de-uso",
+    element: <Terms />,
   },
   {
     path: "/auth/login",

@@ -18,6 +18,9 @@ const registerSchema = z.object({
   height_cm: z.number().int().positive(),
   weight_kg: z.number().positive(),
   password: z.string().min(6),
+  terms_accepted: z.literal(true, {
+    errorMap: () => ({ message: "Aceite os Termos de Uso para criar sua conta" }),
+  }),
   account_type: z.enum(["client", "personal"]).default("client"),
   trainer_application: z
     .object({
