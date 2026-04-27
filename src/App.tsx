@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AdminRoute } from "@/components/AdminRoute";
 import { AppLayout } from "@/components/AppLayout";
+import { PremiumRoute } from "@/components/PremiumRoute";
 import Login from "@/pages/auth/Login";
 import Register from "@/pages/auth/Register";
 import Terms from "@/pages/Terms";
@@ -68,14 +69,14 @@ const router = createBrowserRouter([
     element: <ProtectedRoute><AppLayout /></ProtectedRoute>,
     children: [
       { index: true, element: <Home /> },
-      { path: "workouts", element: <Workouts /> },
-      { path: "workouts/musculacao/:type", element: <WorkoutForm /> },
-      { path: "workouts/cardio/corrida", element: <CardioRunning /> },
-      { path: "workouts/cardio/ciclismo", element: <CardioCycling /> },
-      { path: "workouts/cardio/outras", element: <CardioOther /> },
-      { path: "workouts/cardio/hiit", element: <CardioHIIT /> },
-      { path: "workouts/history", element: <WorkoutHistory /> },
-      { path: "workouts/dashboard", element: <WorkoutDashboard /> },
+      { path: "workouts", element: <PremiumRoute><Workouts /></PremiumRoute> },
+      { path: "workouts/musculacao/:type", element: <PremiumRoute><WorkoutForm /></PremiumRoute> },
+      { path: "workouts/cardio/corrida", element: <PremiumRoute><CardioRunning /></PremiumRoute> },
+      { path: "workouts/cardio/ciclismo", element: <PremiumRoute><CardioCycling /></PremiumRoute> },
+      { path: "workouts/cardio/outras", element: <PremiumRoute><CardioOther /></PremiumRoute> },
+      { path: "workouts/cardio/hiit", element: <PremiumRoute><CardioHIIT /></PremiumRoute> },
+      { path: "workouts/history", element: <PremiumRoute><WorkoutHistory /></PremiumRoute> },
+      { path: "workouts/dashboard", element: <PremiumRoute><WorkoutDashboard /></PremiumRoute> },
       { path: "injectables", element: <Injectables /> },
       { path: "injectables/new", element: <NewInjectable /> },
       { path: "premium", element: <Premium /> },

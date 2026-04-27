@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   BadgeCheck,
@@ -31,6 +31,7 @@ export function AppLayout() {
   const { data: isAdmin } = useIsAdmin();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
   const initials = profile?.full_name
     ?.split(" ")
@@ -50,6 +51,12 @@ export function AppLayout() {
     navigate("/login");
   };
 
+  const isNavItemActive = (to: string) => {
+    if (to === "/") return location.pathname === "/";
+    if (to === "/workouts") return location.pathname.startsWith("/workouts") && !location.pathname.startsWith("/workouts/dashboard");
+    return location.pathname === to || location.pathname.startsWith(`${to}/`);
+  };
+
   return (
     <div className="app-container md:bg-[#24102e] md:p-2">
       <aside className="hidden w-[330px] shrink-0 rounded-[2rem] border border-white/5 bg-[#24102e] md:flex md:flex-col md:justify-between md:px-7 md:py-6">
@@ -64,23 +71,25 @@ export function AppLayout() {
           </div>
 
           <nav className="space-y-3">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
+            {navItems.map((item) => {
+              const isActive = isNavItemActive(item.to);
+
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
                     "flex items-center gap-4 rounded-[1.5rem] px-5 py-4 text-xl font-medium transition-all duration-200",
                     isActive
                       ? "bg-gradient-primary text-primary-foreground shadow-glow"
                       : "text-foreground/82 hover:bg-[hsl(var(--secondary))] hover:text-foreground"
-                  )
-                }
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </nav>
         </div>
 
