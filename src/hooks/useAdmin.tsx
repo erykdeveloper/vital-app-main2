@@ -103,6 +103,18 @@ export interface AdminOrder {
   }>;
 }
 
+export interface PaymentGatewaySettings {
+  provider: 'stripe';
+  is_active: boolean;
+  publishable_key: string;
+  has_secret_key: boolean;
+  has_webhook_secret: boolean;
+  secret_key_preview: string | null;
+  webhook_secret_preview: string | null;
+  source: 'database' | 'environment';
+  updated_at: string | null;
+}
+
 export function useIsAdmin() {
   const { user } = useAuth();
 
@@ -132,6 +144,38 @@ export function useAdminOrders() {
     queryFn: async () => {
       const response = await api.get<{ orders: AdminOrder[] }>('/admin/orders');
       return response.orders;
+    },
+  });
+}
+
+export function usePaymentGatewaySettings() {
+  return useQuery({
+    queryKey: ['paymentGatewaySettings'],
+    queryFn: async () => {
+      const response = await api.get<{ settings: PaymentGatewaySettings }>('/admin/payment-gateway-settings');
+      return response.settings;
+    },
+  });
+}
+
+export function useUpdateStripeGatewaySettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (settings: {
+      is_active: boolean;
+      publishable_key?: string | null;
+      secret_key?: string | null;
+      webhook_secret?: string | null;
+    }) => {
+      const response = await api.put<{ settings: PaymentGatewaySettings }>(
+        '/admin/payment-gateway-settings/stripe',
+        settings,
+      );
+      return response.settings;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paymentGatewaySettings'] });
     },
   });
 }

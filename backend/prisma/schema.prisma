@@ -440,6 +440,19 @@ model PaymentWebhookEvent {
   @@index([createdAt])
 }
 
+model PaymentGatewaySetting {
+  id                     String          @id @default(uuid()) @db.Uuid
+  provider               PaymentProvider @unique
+  isActive               Boolean         @default(true)
+  publishableKey         String?
+  secretKeyEncrypted     String?
+  webhookSecretEncrypted String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
+
+  @@index([isActive])
+}
+
 model AuditLog {
   id           String   @id @default(uuid()) @db.Uuid
   actorUserId  String?  @db.Uuid

@@ -113,7 +113,7 @@ nano .env
 Ajuste:
 
 ```sh
-VITE_API_URL=https://vitalissy.com.br/api
+VITE_API_URL=https://app.vitalissy.com.br/api
 ```
 
 Depois:

@@ -44,17 +44,19 @@ A API ja possui a base para compras internas com PIX e cartao:
 - `GET /api/admin/orders`: lista pedidos para administradores.
 - `GET /api/admin/products`: lista produtos cadastrados para administradores.
 
-Por seguranca, o backend nao recebe nem salva dados de cartao. A integracao final deve usar checkout hospedado/tokenizacao do gateway escolhido e salvar apenas IDs externos, URL de checkout, payload PIX e status.
+Por seguranca, o backend nao recebe nem salva dados de cartao. A integracao Stripe usa Checkout hospedado, salva apenas IDs externos/status e libera Premium somente depois do webhook assinado.
 
 Configure em producao:
 
 ```env
-PAYMENT_PROVIDER="mercado_pago"
+PAYMENT_PROVIDER="stripe"
 PAYMENT_WEBHOOK_SECRET="segredo-forte-do-webhook"
+STRIPE_SECRET_KEY="COLOQUE_A_CHAVE_SECRETA_DA_STRIPE_NO_EASYPANEL"
+STRIPE_WEBHOOK_SECRET="COLOQUE_O_SEGREDO_DO_WEBHOOK_DA_STRIPE_NO_EASYPANEL"
 APP_URL="https://seu-dominio.com"
 ```
 
-O adapter do gateway fica em `src/services/payment-gateway.service.ts`.
+No painel da Stripe, configure o webhook para `https://seu-dominio.com/api/payments/webhooks/stripe`.
 
 ## Deploy
 

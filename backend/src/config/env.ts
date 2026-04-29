@@ -16,6 +16,8 @@ const envSchema = z.object({
     .enum(["manual", "mercado_pago", "stripe", "pagarme", "asaas"])
     .default("manual"),
   PAYMENT_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
   PAYMENT_SUCCESS_PATH: z.string().default("/premium?payment=success"),
   PAYMENT_CANCEL_PATH: z.string().default("/premium?payment=cancelled"),
 });

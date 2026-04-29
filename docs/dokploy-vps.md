@@ -32,8 +32,10 @@ CORS_ORIGIN=http://SEU_IP_DA_VPS
 APP_URL=http://SEU_IP_DA_VPS
 FRONTEND_PORT=80
 
-PAYMENT_PROVIDER=manual
+PAYMENT_PROVIDER=stripe
 PAYMENT_WEBHOOK_SECRET=troque-quando-configurar-o-gateway
+STRIPE_SECRET_KEY=COLOQUE_A_CHAVE_SECRETA_DA_STRIPE_NO_EASYPANEL
+STRIPE_WEBHOOK_SECRET=COLOQUE_O_SEGREDO_DO_WEBHOOK_DA_STRIPE_NO_EASYPANEL
 PAYMENT_SUCCESS_PATH=/premium?payment=success
 PAYMENT_CANCEL_PATH=/premium?payment=cancelled
 ```
@@ -41,14 +43,14 @@ PAYMENT_CANCEL_PATH=/premium?payment=cancelled
 Quando tiver dominio e SSL, troque:
 
 ```env
-APP_URL=https://vitalissy.com.br
-CORS_ORIGIN=https://vitalissy.com.br,https://www.vitalissy.com.br
+APP_URL=https://app.vitalissy.com.br
+CORS_ORIGIN=https://app.vitalissy.com.br
 ```
 
 Para manter mais de um dominio funcionando no login/API, separe as origens por virgula:
 
 ```env
-CORS_ORIGIN=https://vitalissy.com.br,https://www.vitalissy.com.br
+CORS_ORIGIN=https://app.vitalissy.com.br
 ```
 
 ## Primeira subida

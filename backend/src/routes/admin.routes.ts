@@ -5,6 +5,10 @@ import { prisma } from "../lib/prisma.js";
 import { requireAdmin, requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { logAudit } from "../services/audit.service.js";
+import {
+  getPaymentGatewaySettingsSummary,
+  saveStripeGatewaySettings,
+} from "../services/payment-gateway-settings.service.js";
 import { serializeProfile } from "../utils/serializers.js";
 import { getRouteParam } from "../utils/params.js";
 
@@ -27,7 +31,51 @@ const reviewTrainerApplicationSchema = z.object({
   rejection_reason: z.string().trim().max(500).optional().nullable(),
 });
 
+const stripeGatewaySettingsSchema = z.object({
+  is_active: z.boolean(),
+  publishable_key: z.string().trim().max(500).optional().nullable(),
+  secret_key: z.string().trim().max(500).optional().nullable(),
+  webhook_secret: z.string().trim().max(500).optional().nullable(),
+});
+
 router.use(requireAuth, requireAdmin);
+
+router.get(
+  "/payment-gateway-settings",
+  asyncHandler(async (_req, res) => {
+    const settings = await getPaymentGatewaySettingsSummary();
+    return res.json({ settings });
+  }),
+);
+
+router.put(
+  "/payment-gateway-settings/stripe",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const data = stripeGatewaySettingsSchema.parse(req.body);
+    const settings = await saveStripeGatewaySettings({
+      isActive: data.is_active,
+      publishableKey: data.publishable_key,
+      secretKey: data.secret_key,
+      webhookSecret: data.webhook_secret,
+    });
+
+    await logAudit({
+      actorUserId: req.auth!.userId,
+      action: "update_payment_gateway_settings",
+      entityType: "payment_gateway",
+      entityId: "stripe",
+      details: {
+        provider: "stripe",
+        is_active: settings.is_active,
+        publishable_key_configured: Boolean(settings.publishable_key),
+        secret_key_configured: settings.has_secret_key,
+        webhook_secret_configured: settings.has_webhook_secret,
+      },
+    });
+
+    return res.json({ settings });
+  }),
+);
 
 router.get(
   "/users",

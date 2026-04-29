@@ -14,6 +14,7 @@ import { asyncHandler } from "../utils/async-handler.js";
 import { getRouteParam } from "../utils/params.js";
 import {
   createGatewayCheckout,
+  constructStripeWebhookEvent,
   getConfiguredPaymentProvider,
   verifyWebhookSignature,
 } from "../services/payment-gateway.service.js";
@@ -196,6 +197,7 @@ router.post(
     }
 
     const method = methodMap[data.payment_method];
+    const paymentProvider = await getConfiguredPaymentProvider();
     const order = await prisma.order.create({
       data: {
         userId: user.id,
@@ -218,7 +220,7 @@ router.post(
         payments: {
           create: {
             userId: user.id,
-            provider: getConfiguredPaymentProvider(),
+            provider: paymentProvider,
             method,
             amountCents: product.priceCents,
             currency: product.currency,
@@ -241,6 +243,9 @@ router.post(
         method,
         customerEmail: user.email,
         description: product.name,
+        productName: product.name,
+        billingCycle: product.billingCycle,
+        userId: user.id,
       });
 
       updatedPayment = await prisma.payment.update({
@@ -316,6 +321,145 @@ router.post(
     }
 
     const rawBody = (req as typeof req & { rawBody?: Buffer }).rawBody;
+
+    if (provider === PaymentProvider.STRIPE) {
+      const signature = req.header("stripe-signature");
+      let event;
+
+      try {
+        event = await constructStripeWebhookEvent(rawBody, signature);
+      } catch {
+        return res.status(401).json({ message: "Assinatura Stripe invalida" });
+      }
+
+      const existing = await prisma.paymentWebhookEvent.findUnique({
+        where: {
+          provider_providerEventId: {
+            provider,
+            providerEventId: event.id,
+          },
+        },
+      });
+
+      if (existing?.processedAt) {
+        return res.status(204).send();
+      }
+
+      const payload = event as unknown as Prisma.InputJsonValue;
+      const webhookEvent =
+        existing ??
+        (await prisma.paymentWebhookEvent.create({
+          data: {
+            provider,
+            providerEventId: event.id,
+            eventType: event.type,
+            payload,
+          },
+        }));
+
+      let providerPaymentId: string | null = null;
+      let providerPreferenceId: string | null = null;
+      let metadataPaymentId: string | null = null;
+      let nextStatus: PaymentStatus | null = null;
+
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded" ||
+        event.type === "checkout.session.async_payment_failed" ||
+        event.type === "checkout.session.expired"
+      ) {
+        const session = event.data.object;
+        providerPreferenceId = session.id;
+        providerPaymentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
+        metadataPaymentId = session.metadata?.payment_id ?? null;
+
+        if (event.type === "checkout.session.expired") {
+          nextStatus = PaymentStatus.CANCELLED;
+        } else if (event.type === "checkout.session.async_payment_failed") {
+          nextStatus = PaymentStatus.FAILED;
+        } else if (session.payment_status === "paid") {
+          nextStatus = PaymentStatus.PAID;
+        } else {
+          nextStatus = PaymentStatus.PROCESSING;
+        }
+      } else if (event.type === "payment_intent.succeeded" || event.type === "payment_intent.payment_failed") {
+        const paymentIntent = event.data.object;
+        providerPaymentId = paymentIntent.id;
+        metadataPaymentId = paymentIntent.metadata?.payment_id ?? null;
+        nextStatus = event.type === "payment_intent.succeeded" ? PaymentStatus.PAID : PaymentStatus.FAILED;
+      } else {
+        await prisma.paymentWebhookEvent.update({
+          where: { id: webhookEvent.id },
+          data: { processedAt: new Date() },
+        });
+
+        return res.status(204).send();
+      }
+
+      const payment = await prisma.payment.findFirst({
+        where: {
+          provider,
+          OR: [
+            metadataPaymentId ? { id: metadataPaymentId } : undefined,
+            providerPaymentId ? { providerPaymentId } : undefined,
+            providerPreferenceId ? { providerPreferenceId } : undefined,
+          ].filter(Boolean) as Array<{ id: string } | { providerPaymentId: string } | { providerPreferenceId: string }>,
+        },
+      });
+
+      if (!payment) {
+        return res.status(404).json({ message: "Pagamento Stripe nao encontrado" });
+      }
+
+      await prisma.paymentWebhookEvent.update({
+        where: { id: webhookEvent.id },
+        data: { paymentId: payment.id },
+      });
+
+      if (nextStatus === PaymentStatus.PAID) {
+        await prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
+            providerPreferenceId: providerPreferenceId ?? payment.providerPreferenceId,
+          },
+        });
+        await markPaymentAsPaid(payment.id, payload);
+      } else {
+        const shouldCancelOrder = nextStatus === PaymentStatus.CANCELLED;
+        await prisma.$transaction([
+          prisma.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: nextStatus,
+              providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
+              providerPreferenceId: providerPreferenceId ?? payment.providerPreferenceId,
+              rawProviderPayload: payload,
+              failureReason: nextStatus === PaymentStatus.FAILED ? event.type : undefined,
+            },
+          }),
+          ...(shouldCancelOrder
+            ? [
+                prisma.order.update({
+                  where: { id: payment.orderId },
+                  data: {
+                    status: OrderStatus.CANCELLED,
+                    cancelledAt: new Date(),
+                  },
+                }),
+              ]
+            : []),
+        ]);
+      }
+
+      await prisma.paymentWebhookEvent.update({
+        where: { id: webhookEvent.id },
+        data: { processedAt: new Date() },
+      });
+
+      return res.status(204).send();
+    }
+
     const signature = req.header("x-payment-signature");
 
     if (!verifyWebhookSignature(rawBody, signature)) {

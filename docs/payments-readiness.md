@@ -28,17 +28,27 @@ O ponto central e:
 backend/src/services/payment-gateway.service.ts
 ```
 
-Ali devem entrar as chamadas oficiais do provedor escolhido, por exemplo Mercado Pago, Stripe, Pagar.me ou Asaas.
+Ali ficam as chamadas oficiais do provedor escolhido. A integracao Stripe ja cria uma Checkout Session no backend e processa webhooks assinados.
 
 Variaveis principais:
 
 ```env
-PAYMENT_PROVIDER="mercado_pago"
+PAYMENT_PROVIDER="stripe"
 PAYMENT_WEBHOOK_SECRET="segredo-forte"
-APP_URL="https://vitalissy.com.br"
+STRIPE_SECRET_KEY="COLOQUE_A_CHAVE_SECRETA_DA_STRIPE_NO_EASYPANEL"
+STRIPE_WEBHOOK_SECRET="COLOQUE_O_SEGREDO_DO_WEBHOOK_DA_STRIPE_NO_EASYPANEL"
+APP_URL="https://app.vitalissy.com.br"
 PAYMENT_SUCCESS_PATH="/premium?payment=success"
 PAYMENT_CANCEL_PATH="/premium?payment=cancelled"
 ```
+
+Webhook Stripe em producao:
+
+```txt
+https://app.vitalissy.com.br/api/payments/webhooks/stripe
+```
+
+Eventos recomendados: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.succeeded` e `payment_intent.payment_failed`.
 
 ## Endpoints
 
