@@ -31,6 +31,7 @@ import AdminAppointments from "@/pages/admin/AdminAppointments";
 
 import BodyProgress from "@/pages/BodyProgress";
 import Bioimpedancia from "@/pages/Bioimpedancia";
+import Wearables from "@/pages/Wearables";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminUsers from "@/pages/admin/AdminUsers";
 import AdminFinance from "@/pages/admin/AdminFinance";
@@ -87,6 +88,7 @@ const router = createBrowserRouter([
       { path: "profile", element: <Profile /> },
       { path: "body-progress", element: <BodyProgress /> },
       { path: "bioimpedancia", element: <Bioimpedancia /> },
+      { path: "wearables", element: <Wearables /> },
     ],
   },
   // Admin Routes

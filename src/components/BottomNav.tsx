@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, User, BookOpen, Shield } from 'lucide-react';
+import { Home, Calendar, User, BookOpen, Shield, Watch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useAdmin';
 
 const baseNavItems = [
   { to: '/', icon: Home, label: 'Início' },
   { to: '/workouts', icon: BookOpen, label: 'Treinos' },
+  { to: '/wearables', icon: Watch, label: 'Relógio' },
   { to: '/appointments', icon: Calendar, label: 'Consultas' },
   { to: '/profile', icon: User, label: 'Perfil' },
 ];

@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Trophy,
   UserCircle2,
+  Watch,
   Zap,
 } from "lucide-react";
 import { format, eachDayOfInterval, endOfWeek, isSameDay, parseISO, startOfMonth, startOfWeek } from "date-fns";
@@ -234,12 +235,14 @@ function RecommendationCard({
   description,
   to,
   className,
+  imagePosition,
 }: {
   label: string;
   title: string;
   description: string;
   to: string;
   className: string;
+  imagePosition?: string;
 }) {
   return (
     <Link
@@ -249,7 +252,17 @@ function RecommendationCard({
         className
       )}
     >
-      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
+      {imagePosition ? (
+        <div
+          className="absolute inset-0 bg-cover bg-no-repeat transition-transform duration-300 group-hover:scale-105"
+          style={{
+            backgroundImage: "url('/images/workout-examples-ai.jpg')",
+            backgroundPosition: imagePosition,
+            backgroundSize: "205% 205%",
+          }}
+        />
+      ) : null}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/5" />
       <div className="relative flex h-full flex-col justify-between">
         <span className="w-fit rounded-full bg-primary px-4 py-1 text-sm font-semibold text-primary-foreground">
           {label}
@@ -304,6 +317,7 @@ const searchItems = [
   { label: "Treinos", description: "Registrar uma nova atividade", to: "/workouts", icon: Zap },
   { label: "Histórico de treinos", description: "Ver treinos registrados", to: "/workouts/history", icon: BarChart3 },
   { label: "Estatísticas", description: "Relatórios e evolução", to: "/workouts/dashboard", icon: BarChart3 },
+  { label: "Relógio", description: "Conectar wearable e gerar ficha vital", to: "/wearables", icon: Watch },
   { label: "Conquistas", description: "Badges desbloqueados", to: "/premium", icon: Trophy },
   { label: "Agendamentos", description: "Consultas e bioimpedância", to: "/appointments", icon: CalendarCheck },
 ];
@@ -465,21 +479,32 @@ export default function Home() {
       title: "Corrida",
       description: "Treino intervalado para elevar o ritmo e ganhar folego.",
       to: "/workouts/cardio/corrida",
-      className: "bg-[radial-gradient(circle_at_top_right,_rgba(255,209,102,0.24),_transparent_34%),linear-gradient(135deg,_#0d1628_0%,_#1b253e_38%,_#7d1016_100%)]",
+      className: "bg-[#151515]",
+      imagePosition: "left top",
     },
     {
       label: "Musculação",
       title: "Academia",
       description: "Sessão focada em força, volume e constância semanal.",
       to: "/workouts/musculacao/academia",
-      className: "bg-[radial-gradient(circle_at_top_left,_rgba(255,178,67,0.32),_transparent_28%),linear-gradient(135deg,_#26140f_0%,_#58321d_38%,_#131313_100%)]",
+      className: "bg-[#151515]",
+      imagePosition: "right top",
     },
     {
       label: "Flexibilidade",
       title: "Mobilidade",
       description: "Abra espaço para recuperação ativa e movimento com controle.",
       to: "/workouts/cardio/outras",
-      className: "bg-[radial-gradient(circle_at_top,_rgba(255,216,140,0.22),_transparent_28%),linear-gradient(135deg,_#3a1610_0%,_#8c4c39_42%,_#d98f69_100%)]",
+      className: "bg-[#151515]",
+      imagePosition: "left bottom",
+    },
+    {
+      label: "Bike",
+      title: "Ciclismo",
+      description: "Cardio controlado para resistência e gasto calórico sem impacto.",
+      to: "/workouts/cardio/ciclismo",
+      className: "bg-[#151515]",
+      imagePosition: "right bottom",
     },
   ];
 
@@ -629,6 +654,28 @@ export default function Home() {
           />
         </section>
 
+        <section className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-primary/15 text-primary">
+                <Watch className="h-6 w-6" />
+              </div>
+              <div className="max-w-2xl">
+                <h2 className="text-2xl font-semibold">Relógio e ficha vital</h2>
+                <p className="mt-2 text-base leading-relaxed text-muted-foreground">
+                  Conecte Apple Health, Google Fit, Garmin ou Fitbit para acompanhar batimentos, sono e recuperação em uma ficha limpa.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/wearables"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              Conectar relógio
+            </Link>
+          </div>
+        </section>
+
         <section className="grid gap-4 xl:grid-cols-[1fr_2fr]">
           <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
             <div className="mb-6">
@@ -728,7 +775,7 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {recommendationCards.map((card) => (
               <RecommendationCard key={card.title} {...card} />
             ))}
