@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -22,21 +22,11 @@ import { Progress } from "@/components/ui/progress";
 import { useBioimpedance } from "@/hooks/useBioimpedance";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
+import { useWearables, type WearableProvider } from "@/hooks/useWearables";
 import { cn } from "@/lib/utils";
 
-type ProviderId = "apple_health" | "google_fit" | "garmin" | "fitbit";
-
-interface WearableConnection {
-  provider: ProviderId;
-  connectedAt: string;
-  lastSyncAt: string;
-  deviceName: string;
-}
-
-const STORAGE_KEY = "vitalissy-wearable-connection";
-
 const providers: Array<{
-  id: ProviderId;
+  id: WearableProvider;
   name: string;
   description: string;
   deviceName: string;
@@ -67,31 +57,6 @@ const providers: Array<{
   },
 ];
 
-const sampleVitals = {
-  restingHeartRate: 62,
-  currentHeartRate: 78,
-  heartRateVariability: 48,
-  oxygenSaturation: 97,
-  activeCalories: 486,
-  steps: 8420,
-  sleepHours: 7.4,
-  recoveryScore: 82,
-  stressScore: 28,
-  battery: 76,
-};
-
-function readConnection(): WearableConnection | null {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as WearableConnection;
-  } catch {
-    localStorage.removeItem(STORAGE_KEY);
-    return null;
-  }
-}
-
 function formatDateTime(value?: string | null) {
   if (!value) return "--";
   return format(new Date(value), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
@@ -108,6 +73,22 @@ function getBmiLabel(value?: number | null) {
   if (value < 25) return "Faixa adequada";
   if (value < 30) return "Sobrepeso";
   return "Atenção clínica";
+}
+
+function formatSleep(minutes?: number | null) {
+  if (!minutes) return "--";
+  return `${(minutes / 60).toFixed(1)} h`;
+}
+
+function getSeverityClass(severity: string) {
+  const classes: Record<string, string> = {
+    success: "border-emerald-400/20 bg-emerald-400/10 text-emerald-100",
+    warning: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    critical: "border-red-400/20 bg-red-400/10 text-red-100",
+    info: "border-white/5 bg-background/20 text-foreground",
+  };
+
+  return classes[severity] ?? classes.info;
 }
 
 function ReportMetric({
@@ -162,66 +143,95 @@ function VitalCard({
 export default function Wearables() {
   const { profile, loading: profileLoading } = useProfile();
   const { latestRecord, previousRecord, loading: bioLoading, getDifference } = useBioimpedance();
+  const {
+    connection,
+    latestReading,
+    notifications,
+    unreadCount,
+    loading: wearableLoading,
+    syncing,
+    saving,
+    connect,
+    sync,
+    disconnect,
+    markNotificationRead,
+    markAllNotificationsRead,
+  } = useWearables();
   const { toast } = useToast();
-  const [connection, setConnection] = useState<WearableConnection | null>(null);
-  const [syncing, setSyncing] = useState(false);
-
-  useEffect(() => {
-    setConnection(readConnection());
-  }, []);
 
   const selectedProvider = providers.find((provider) => provider.id === connection?.provider);
   const weightDiff = getDifference(latestRecord?.weight_kg ?? null, previousRecord?.weight_kg ?? null);
   const fatDiff = getDifference(latestRecord?.body_fat_percent ?? null, previousRecord?.body_fat_percent ?? null);
   const reportDate = useMemo(() => new Date(), []);
+  const currentHeartRate = latestReading?.heart_rate_bpm ?? null;
+  const restingHeartRate = latestReading?.resting_heart_rate_bpm ?? null;
+  const heartRateVariability = latestReading?.hrv_ms ?? null;
+  const oxygenSaturation = latestReading?.spo2_percent ?? null;
+  const activeCalories = latestReading?.active_calories ?? null;
+  const steps = latestReading?.steps ?? null;
+  const sleepMinutes = latestReading?.sleep_minutes ?? null;
+  const recoveryScore = latestReading?.recovery_score ?? null;
+  const stressScore = latestReading?.stress_score ?? null;
+  const battery = latestReading?.battery_percent ?? null;
 
-  const handleConnect = (provider: (typeof providers)[number]) => {
-    const now = new Date().toISOString();
-    const nextConnection: WearableConnection = {
+  const handleConnect = async (provider: (typeof providers)[number]) => {
+    const result = await connect({
       provider: provider.id,
-      connectedAt: now,
-      lastSyncAt: now,
-      deviceName: provider.deviceName,
-    };
+      device_name: provider.deviceName,
+    });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextConnection));
-    setConnection(nextConnection);
+    if (result.error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao conectar relógio",
+        description: result.error,
+      });
+      return;
+    }
+
     toast({
       title: "Relógio conectado",
-      description: `${provider.name} foi vinculado ao seu painel Vitalissy.`,
+      description: `${provider.name} foi salvo no banco e sincronizado com segurança.`,
     });
   };
 
-  const handleDisconnect = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    setConnection(null);
+  const handleDisconnect = async () => {
+    const result = await disconnect();
+
+    if (result.error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao remover conexão",
+        description: result.error,
+      });
+      return;
+    }
+
     toast({
       title: "Conexão removida",
-      description: "Os dados do relógio deixaram de aparecer na dashboard.",
+      description: "Tokens foram apagados e a permissão ficou registrada no histórico.",
     });
   };
 
-  const handleSync = () => {
-    setSyncing(true);
-    window.setTimeout(() => {
-      const nextConnection = connection
-        ? { ...connection, lastSyncAt: new Date().toISOString() }
-        : null;
+  const handleSync = async () => {
+    const result = await sync();
 
-      if (nextConnection) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(nextConnection));
-        setConnection(nextConnection);
-      }
-
-      setSyncing(false);
+    if (result.error) {
       toast({
-        title: "Sincronização concluída",
-        description: "As métricas vitais foram atualizadas.",
+        variant: "destructive",
+        title: "Erro ao sincronizar",
+        description: result.error,
       });
-    }, 700);
+      return;
+    }
+
+    toast({
+      title: "Sincronização concluída",
+      description: "As métricas vitais e notificações foram atualizadas no banco.",
+    });
   };
 
-  if (profileLoading || bioLoading) {
+  if (profileLoading || bioLoading || wearableLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
@@ -290,8 +300,8 @@ export default function Wearables() {
                   <div className="flex items-center gap-3">
                     <CheckCircle2 className="h-5 w-5 text-emerald-300" />
                     <div>
-                      <p className="font-semibold text-emerald-100">{selectedProvider?.name} conectado</p>
-                      <p className="text-sm text-emerald-100/70">{connection.deviceName}</p>
+                      <p className="font-semibold text-emerald-100">{connection.provider_label} conectado</p>
+                      <p className="text-sm text-emerald-100/70">{connection.device_name}</p>
                     </div>
                   </div>
                 </div>
@@ -299,15 +309,19 @@ export default function Wearables() {
                 <div className="grid gap-3 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between rounded-2xl bg-background/20 px-4 py-3">
                     <span>Última sincronização</span>
-                    <span className="text-foreground">{formatDateTime(connection.lastSyncAt)}</span>
+                    <span className="text-foreground">{formatDateTime(connection.last_sync_at)}</span>
                   </div>
                   <div className="flex items-center justify-between rounded-2xl bg-background/20 px-4 py-3">
                     <span>Bateria</span>
-                    <span className="text-foreground">{sampleVitals.battery}%</span>
+                    <span className="text-foreground">{formatMetric(battery, "%")}</span>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl bg-background/20 px-4 py-3">
+                    <span>Notificações não lidas</span>
+                    <span className="text-foreground">{unreadCount}</span>
                   </div>
                 </div>
 
-                <Button type="button" variant="outline" className="w-full" onClick={handleDisconnect}>
+                <Button type="button" variant="outline" className="w-full" onClick={handleDisconnect} disabled={saving}>
                   Remover conexão
                 </Button>
               </div>
@@ -317,7 +331,8 @@ export default function Wearables() {
                   <button
                     key={provider.id}
                     type="button"
-                    onClick={() => handleConnect(provider)}
+                    onClick={() => void handleConnect(provider)}
+                    disabled={saving}
                     className="flex items-center justify-between gap-4 rounded-[1.4rem] border border-white/5 bg-background/20 p-4 text-left transition-colors hover:bg-[hsl(var(--secondary))]"
                   >
                     <span className="flex min-w-0 items-center gap-3">
@@ -340,30 +355,30 @@ export default function Wearables() {
             <VitalCard
               icon={HeartPulse}
               label="Batimentos"
-              value={`${sampleVitals.currentHeartRate} bpm`}
-              helper={`repouso ${sampleVitals.restingHeartRate} bpm`}
-              progress={78}
+              value={currentHeartRate ? `${currentHeartRate} bpm` : "--"}
+              helper={restingHeartRate ? `repouso ${restingHeartRate} bpm` : "aguardando sincronização"}
+              progress={currentHeartRate ?? 0}
             />
             <VitalCard
               icon={Activity}
               label="Variabilidade"
-              value={`${sampleVitals.heartRateVariability} ms`}
+              value={heartRateVariability ? `${heartRateVariability} ms` : "--"}
               helper="indicador de recuperação"
-              progress={64}
+              progress={heartRateVariability ?? 0}
             />
             <VitalCard
               icon={Moon}
               label="Sono"
-              value={`${sampleVitals.sleepHours} h`}
+              value={formatSleep(sleepMinutes)}
               helper="última noite registrada"
-              progress={82}
+              progress={sleepMinutes ? Math.min(100, (sleepMinutes / 480) * 100) : 0}
             />
             <VitalCard
               icon={Gauge}
               label="Recuperação"
-              value={`${sampleVitals.recoveryScore}%`}
+              value={recoveryScore ? `${recoveryScore}%` : "--"}
               helper="pronto para treino moderado"
-              progress={sampleVitals.recoveryScore}
+              progress={recoveryScore ?? 0}
             />
           </div>
         </section>
@@ -416,6 +431,55 @@ export default function Wearables() {
             </div>
           </div>
         </section>
+
+        <section className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">Notificações do Relógio</h2>
+              <p className="text-base text-muted-foreground">Alertas ficam salvos no banco e podem ser revisados com segurança.</p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void markAllNotificationsRead()}
+              disabled={unreadCount === 0}
+            >
+              Marcar tudo como lido
+            </Button>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            {notifications.length > 0 ? (
+              notifications.map((notification) => (
+                <button
+                  key={notification.id}
+                  type="button"
+                  onClick={() => void markNotificationRead(notification.id)}
+                  className={cn(
+                    "rounded-[1.25rem] border p-4 text-left transition-transform hover:-translate-y-0.5",
+                    getSeverityClass(notification.severity),
+                    notification.is_read ? "opacity-65" : ""
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-semibold">{notification.title}</p>
+                      <p className="mt-1 text-sm leading-relaxed opacity-75">{notification.message}</p>
+                    </div>
+                    {!notification.is_read ? (
+                      <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-primary" />
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-xs opacity-60">{formatDateTime(notification.created_at)}</p>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-[1.25rem] border border-white/5 bg-background/20 p-5 text-sm text-muted-foreground">
+                Nenhuma notificação do relógio ainda.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
 
       <section id="wearable-report" className="mx-auto hidden max-w-5xl bg-white p-8 text-slate-950 print:block">
@@ -428,8 +492,8 @@ export default function Wearables() {
             </div>
             <div className="rounded-xl border border-slate-200 px-4 py-3 text-right">
               <p className="text-xs uppercase tracking-wide text-slate-500">Fonte</p>
-              <p className="font-semibold">{selectedProvider?.name ?? "Relógio não conectado"}</p>
-              <p className="text-xs text-slate-500">{connection ? formatDateTime(connection.lastSyncAt) : "Sem sincronização"}</p>
+              <p className="font-semibold">{connection?.provider_label ?? selectedProvider?.name ?? "Relógio não conectado"}</p>
+              <p className="text-xs text-slate-500">{connection ? formatDateTime(connection.last_sync_at) : "Sem sincronização"}</p>
             </div>
           </div>
         </div>
@@ -443,14 +507,14 @@ export default function Wearables() {
         <div className="mt-6">
           <h2 className="text-lg font-semibold">Sinais do Relógio</h2>
           <div className="mt-3 grid grid-cols-4 gap-3">
-            <ReportMetric label="Batimento atual" value={`${sampleVitals.currentHeartRate} bpm`} helper={`repouso ${sampleVitals.restingHeartRate} bpm`} />
-            <ReportMetric label="VFC" value={`${sampleVitals.heartRateVariability} ms`} helper="variabilidade cardíaca" />
-            <ReportMetric label="Oxigenação" value={`${sampleVitals.oxygenSaturation}%`} helper="SpO2 estimado" />
-            <ReportMetric label="Sono" value={`${sampleVitals.sleepHours} h`} helper="última noite" />
-            <ReportMetric label="Passos" value={formatMetric(sampleVitals.steps)} helper="dia atual" />
-            <ReportMetric label="Calorias ativas" value={`${sampleVitals.activeCalories} kcal`} helper="dia atual" />
-            <ReportMetric label="Recuperação" value={`${sampleVitals.recoveryScore}%`} helper="prontidão geral" />
-            <ReportMetric label="Estresse" value={`${sampleVitals.stressScore}%`} helper="carga estimada" />
+            <ReportMetric label="Batimento atual" value={currentHeartRate ? `${currentHeartRate} bpm` : "--"} helper={restingHeartRate ? `repouso ${restingHeartRate} bpm` : undefined} />
+            <ReportMetric label="VFC" value={heartRateVariability ? `${heartRateVariability} ms` : "--"} helper="variabilidade cardíaca" />
+            <ReportMetric label="Oxigenação" value={oxygenSaturation ? `${oxygenSaturation}%` : "--"} helper="SpO2 estimado" />
+            <ReportMetric label="Sono" value={formatSleep(sleepMinutes)} helper="última noite" />
+            <ReportMetric label="Passos" value={formatMetric(steps)} helper="dia atual" />
+            <ReportMetric label="Calorias ativas" value={activeCalories ? `${activeCalories} kcal` : "--"} helper="dia atual" />
+            <ReportMetric label="Recuperação" value={recoveryScore ? `${recoveryScore}%` : "--"} helper="prontidão geral" />
+            <ReportMetric label="Estresse" value={stressScore ? `${stressScore}%` : "--"} helper="carga estimada" />
           </div>
         </div>
 

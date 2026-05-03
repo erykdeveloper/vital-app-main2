@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
+import { fetchWearableSummary, type WearableNotification } from "@/hooks/useWearables";
 import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type StrengthWorkoutApi } from "@/lib/workoutApi";
 import { cn } from "@/lib/utils";
 
@@ -258,7 +259,7 @@ function RecommendationCard({
           style={{
             backgroundImage: "url('/images/workout-examples-ai.jpg')",
             backgroundPosition: imagePosition,
-            backgroundSize: "205% 205%",
+            backgroundSize: "205% auto",
           }}
         />
       ) : null}
@@ -327,6 +328,7 @@ export default function Home() {
   const { profile, loading } = useProfile();
   const { achievements, userAchievements } = useAchievements();
   const [dashboardData, setDashboardData] = useState<DashboardData>(initialDashboardData);
+  const [wearableNotifications, setWearableNotifications] = useState<WearableNotification[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -408,6 +410,28 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadWearableNotifications = async () => {
+      try {
+        const summary = await fetchWearableSummary();
+        if (!active) return;
+        setWearableNotifications(summary.notifications.filter((notification) => !notification.is_read));
+      } catch {
+        if (active) {
+          setWearableNotifications([]);
+        }
+      }
+    };
+
+    loadWearableNotifications();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   if (loading) {
     return (
       <div className="flex min-h-full items-center justify-center">
@@ -472,6 +496,11 @@ export default function Home() {
           to: "/premium",
         }
       : null,
+    ...wearableNotifications.slice(0, 3).map((notification) => ({
+      title: notification.title,
+      description: notification.message,
+      to: "/wearables",
+    })),
   ].filter(Boolean) as Array<{ title: string; description: string; to: string }>;
   const recommendationCards = [
     {

@@ -20,6 +20,14 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   PAYMENT_SUCCESS_PATH: z.string().default("/premium?payment=success"),
   PAYMENT_CANCEL_PATH: z.string().default("/premium?payment=cancelled"),
+  GOOGLE_FIT_CLIENT_ID: z.string().optional(),
+  GOOGLE_FIT_CLIENT_SECRET: z.string().optional(),
+  FITBIT_CLIENT_ID: z.string().optional(),
+  FITBIT_CLIENT_SECRET: z.string().optional(),
+  GARMIN_CLIENT_ID: z.string().optional(),
+  GARMIN_CLIENT_SECRET: z.string().optional(),
+  APPLE_HEALTH_TEAM_ID: z.string().optional(),
+  APPLE_HEALTH_KEY_ID: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
