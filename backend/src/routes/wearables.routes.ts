@@ -3,8 +3,11 @@ import { z } from "zod";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/async-handler.js";
 import { getRouteParam } from "../utils/params.js";
+import { env } from "../config/env.js";
 import {
+  completeFitbitAuthorization,
   connectWearable,
+  createFitbitAuthorizationUrl,
   disconnectWearable,
   getWearableSummary,
   markAllWearableNotificationsRead,
@@ -21,6 +24,20 @@ const connectSchema = z.object({
   device_name: z.string().trim().min(1).max(120).nullable().optional(),
   external_account_label: z.string().trim().max(160).nullable().optional(),
 });
+const fitbitAuthorizeSchema = z.object({
+  redirect_path: z.string().optional(),
+});
+const fitbitCallbackSchema = z.object({
+  code: z.string().optional(),
+  state: z.string().optional(),
+  error: z.string().optional(),
+});
+
+function appRedirect(path: string, params: Record<string, string>) {
+  const url = new URL(path, env.APP_URL);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  return url.toString();
+}
 
 router.get(
   "/summary",
@@ -44,6 +61,43 @@ router.post(
     });
 
     return res.status(201).json({ summary });
+  }),
+);
+
+router.get(
+  "/fitbit/authorize",
+  requireAuth,
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const data = fitbitAuthorizeSchema.parse(req.query);
+    const authorizationUrl = await createFitbitAuthorizationUrl(req.auth!.userId, data.redirect_path);
+    return res.json({ authorization_url: authorizationUrl });
+  }),
+);
+
+router.get(
+  "/fitbit/callback",
+  asyncHandler(async (req, res) => {
+    const data = fitbitCallbackSchema.parse(req.query);
+
+    if (data.error) {
+      return res.redirect(appRedirect("/wearables", { fitbit: "denied", error: data.error }));
+    }
+
+    if (!data.code || !data.state) {
+      return res.redirect(appRedirect("/wearables", { fitbit: "error", error: "missing_code_or_state" }));
+    }
+
+    try {
+      const redirectPath = await completeFitbitAuthorization({
+        code: data.code,
+        state: data.state,
+      });
+
+      return res.redirect(appRedirect(redirectPath, { fitbit: "connected" }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "fitbit_callback_error";
+      return res.redirect(appRedirect("/wearables", { fitbit: "error", error: message }));
+    }
   }),
 );
 

@@ -9,6 +9,10 @@ import { useToast } from '@/hooks/use-toast';
 
 const benefits = [
   {
+    title: 'Estatísticas de Treino',
+    description: 'Veja gráficos semanais, mensais e anuais de treinos, calorias, distância e minutos ativos.',
+  },
+  {
     title: 'Progresso Corporal Avançado',
     description: 'Acompanhe sua evolução com gráficos, histórico detalhado e comparativos.',
   },
@@ -214,7 +218,7 @@ export default function Premium() {
         </div>
         <h2 className="text-2xl font-bold">Seja Premium</h2>
         <p className="text-muted-foreground">
-          Desbloqueie todo o seu potencial com recursos exclusivos
+          O caderno de treinos é gratuito. Assine para desbloquear estatísticas e recursos avançados.
         </p>
         <div className="flex items-baseline justify-center gap-1">
           <span className="text-4xl font-bold text-accent">

@@ -1,4 +1,4 @@
-import { ArrowLeft, Dumbbell, Home, Flame, PersonStanding, Footprints, Bike, MoreHorizontal, Zap, History } from 'lucide-react';
+import { ArrowLeft, BarChart3, Crown, Dumbbell, Home, Flame, PersonStanding, Footprints, Bike, MoreHorizontal, Zap, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface WorkoutCardProps {
@@ -35,9 +35,9 @@ export default function Workouts() {
           <ArrowLeft className="w-6 h-6" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold">Diário de Treinos</h1>
+          <h1 className="text-2xl font-bold">Caderno de Treinos</h1>
           <p className="text-muted-foreground text-sm">
-            Escolha sua modalidade
+            Gratuito para registrar e consultar seus treinos
           </p>
         </div>
       </div>
@@ -114,6 +114,16 @@ export default function Workouts() {
           label="Ver Histórico"
           description="Treinos realizados"
         />
+        <WorkoutCard
+          to="/workouts/dashboard"
+          icon={BarChart3}
+          label="Estatísticas Premium"
+          description="Gráficos e evolução pagos"
+        />
+        <div className="flex items-center gap-2 rounded-xl border border-accent/20 bg-accent/5 px-4 py-3 text-sm text-muted-foreground">
+          <Crown className="h-4 w-4 shrink-0 text-accent" />
+          <span>O caderno é gratuito. As estatísticas avançadas fazem parte do Premium.</span>
+        </div>
       </div>
     </div>
   );

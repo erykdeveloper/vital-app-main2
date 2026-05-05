@@ -24,6 +24,7 @@ const envSchema = z.object({
   GOOGLE_FIT_CLIENT_SECRET: z.string().optional(),
   FITBIT_CLIENT_ID: z.string().optional(),
   FITBIT_CLIENT_SECRET: z.string().optional(),
+  FITBIT_REDIRECT_URI: z.union([z.string().url(), z.literal("")]).optional(),
   GARMIN_CLIENT_ID: z.string().optional(),
   GARMIN_CLIENT_SECRET: z.string().optional(),
   APPLE_HEALTH_TEAM_ID: z.string().optional(),

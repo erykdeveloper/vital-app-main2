@@ -64,6 +64,12 @@ export async function fetchWearableSummary() {
   return response.summary;
 }
 
+export async function fetchFitbitAuthorizationUrl(redirectPath = "/wearables") {
+  const query = new URLSearchParams({ redirect_path: redirectPath });
+  const response = await api.get<{ authorization_url: string }>(`/wearables/fitbit/authorize?${query.toString()}`);
+  return response.authorization_url;
+}
+
 export function useWearables() {
   const { user } = useAuth();
   const [summary, setSummary] = useState<WearableSummary>(emptySummary);
@@ -111,6 +117,20 @@ export function useWearables() {
       return { error: err instanceof Error ? err.message : "Erro ao conectar relogio" };
     } finally {
       setSaving(false);
+    }
+  };
+
+  const connectFitbit = async () => {
+    if (!user) return { error: "Not authenticated" };
+
+    try {
+      setSaving(true);
+      const authorizationUrl = await fetchFitbitAuthorizationUrl("/wearables");
+      window.location.assign(authorizationUrl);
+      return { error: null };
+    } catch (err) {
+      setSaving(false);
+      return { error: err instanceof Error ? err.message : "Erro ao iniciar Fitbit" };
     }
   };
 
@@ -180,6 +200,7 @@ export function useWearables() {
     error,
     refresh,
     connect,
+    connectFitbit,
     sync,
     disconnect,
     markNotificationRead,

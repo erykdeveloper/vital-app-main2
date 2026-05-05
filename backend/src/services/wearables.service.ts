@@ -13,6 +13,10 @@ import { env } from "../config/env.js";
 import { prisma } from "../lib/prisma.js";
 
 const SECRET_VERSION = "v1";
+const FITBIT_AUTH_URL = "https://www.fitbit.com/oauth2/authorize";
+const FITBIT_TOKEN_URL = "https://api.fitbit.com/oauth2/token";
+const FITBIT_API_URL = "https://api.fitbit.com";
+const FITBIT_SCOPES = ["activity", "heartrate", "sleep", "profile"];
 
 const providerLabels: Record<WearableProvider, string> = {
   [WearableProvider.APPLE_HEALTH]: "Apple Health",
@@ -39,6 +43,62 @@ function encryptSecret(value: string) {
   const tag = cipher.getAuthTag();
 
   return [SECRET_VERSION, iv.toString("base64"), tag.toString("base64"), encrypted.toString("base64")].join(":");
+}
+
+function decryptSecret(value: string | null) {
+  if (!value) return undefined;
+
+  const [version, iv, tag, encrypted] = value.split(":");
+  if (version !== SECRET_VERSION || !iv || !tag || !encrypted) return undefined;
+
+  const decipher = crypto.createDecipheriv("aes-256-gcm", encryptionKey(), Buffer.from(iv, "base64"));
+  decipher.setAuthTag(Buffer.from(tag, "base64"));
+
+  return Buffer.concat([
+    decipher.update(Buffer.from(encrypted, "base64")),
+    decipher.final(),
+  ]).toString("utf8");
+}
+
+function base64Url(buffer: Buffer) {
+  return buffer.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fitbitRedirectUri() {
+  return env.FITBIT_REDIRECT_URI || `${env.APP_URL.replace(/\/$/, "")}/api/wearables/fitbit/callback`;
+}
+
+function fitbitBasicAuthHeader() {
+  if (!env.FITBIT_CLIENT_ID || !env.FITBIT_CLIENT_SECRET) {
+    throw new Error("Credenciais Fitbit nao configuradas");
+  }
+
+  return `Basic ${Buffer.from(`${env.FITBIT_CLIENT_ID}:${env.FITBIT_CLIENT_SECRET}`).toString("base64")}`;
+}
+
+function addSeconds(date: Date, seconds: number) {
+  return new Date(date.getTime() + seconds * 1000);
+}
+
+function todayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function clampScore(value: number) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+async function parseFitbitResponse<T>(response: Response): Promise<T> {
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const message = Array.isArray((data as { errors?: Array<{ message?: string }> }).errors)
+      ? (data as { errors: Array<{ message?: string }> }).errors.map((error) => error.message).filter(Boolean).join(" ")
+      : "Erro ao comunicar com Fitbit";
+    throw new Error(message || "Erro ao comunicar com Fitbit");
+  }
+
+  return data as T;
 }
 
 function providerOffset(provider: WearableProvider) {
@@ -252,7 +312,272 @@ export async function connectWearable(input: {
   return getWearableSummary(input.userId);
 }
 
+interface FitbitTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: "Bearer";
+  user_id: string;
+  scope?: string;
+}
+
+interface FitbitProfileResponse {
+  user?: {
+    displayName?: string;
+    fullName?: string;
+    encodedId?: string;
+  };
+}
+
+interface FitbitActivityResponse {
+  summary?: {
+    steps?: number;
+    activityCalories?: number;
+    restingHeartRate?: number;
+    veryActiveMinutes?: number;
+    fairlyActiveMinutes?: number;
+    lightlyActiveMinutes?: number;
+    sedentaryMinutes?: number;
+  };
+}
+
+interface FitbitSleepResponse {
+  summary?: {
+    totalMinutesAsleep?: number;
+    totalTimeInBed?: number;
+  };
+}
+
+interface FitbitHeartResponse {
+  "activities-heart"?: Array<{
+    value?: {
+      restingHeartRate?: number;
+    };
+  }>;
+  "activities-heart-intraday"?: {
+    dataset?: Array<{
+      value?: number;
+    }>;
+  };
+}
+
+async function fitbitFetch<T>(accessToken: string, path: string) {
+  const response = await fetch(`${FITBIT_API_URL}${path}`, {
+    headers: {
+      accept: "application/json",
+      authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  return parseFitbitResponse<T>(response);
+}
+
+async function exchangeFitbitToken(body: URLSearchParams) {
+  const response = await fetch(FITBIT_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      accept: "application/json",
+      authorization: fitbitBasicAuthHeader(),
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  return parseFitbitResponse<FitbitTokenResponse>(response);
+}
+
+async function refreshFitbitToken(connection: WearableConnection) {
+  const refreshToken = decryptSecret(connection.refreshTokenEncrypted);
+  if (!refreshToken) {
+    throw new Error("Refresh token Fitbit ausente");
+  }
+
+  const token = await exchangeFitbitToken(new URLSearchParams({
+    grant_type: "refresh_token",
+    refresh_token: refreshToken,
+  }));
+
+  await prisma.wearableConnection.update({
+    where: { id: connection.id },
+    data: {
+      accessTokenEncrypted: encryptSecret(token.access_token),
+      refreshTokenEncrypted: encryptSecret(token.refresh_token),
+      tokenExpiresAt: addSeconds(new Date(), token.expires_in),
+      externalAccountLabel: token.user_id,
+      scopes: token.scope?.split(" ") ?? FITBIT_SCOPES,
+    },
+  });
+
+  return token.access_token;
+}
+
+async function getFitbitAccessToken(connection: WearableConnection) {
+  const accessToken = decryptSecret(connection.accessTokenEncrypted);
+  const expiresAt = connection.tokenExpiresAt?.getTime() ?? 0;
+  const refreshWindowMs = 5 * 60 * 1000;
+
+  if (accessToken && expiresAt > Date.now() + refreshWindowMs) {
+    return accessToken;
+  }
+
+  return refreshFitbitToken(connection);
+}
+
+async function createFitbitReading(userId: string, connection: WearableConnection) {
+  const accessToken = await getFitbitAccessToken(connection);
+  const date = todayIsoDate();
+
+  const [activity, sleep, heart, intraday] = await Promise.all([
+    fitbitFetch<FitbitActivityResponse>(accessToken, `/1/user/-/activities/date/${date}.json`),
+    fitbitFetch<FitbitSleepResponse>(accessToken, `/1.2/user/-/sleep/date/${date}.json`).catch(() => null),
+    fitbitFetch<FitbitHeartResponse>(accessToken, `/1/user/-/activities/heart/date/${date}/1d.json`).catch(() => null),
+    fitbitFetch<FitbitHeartResponse>(accessToken, `/1/user/-/activities/heart/date/${date}/${date}/1min.json`).catch(() => null),
+  ]);
+
+  const activitySummary = activity.summary;
+  const sleepMinutes = sleep?.summary?.totalMinutesAsleep ?? null;
+  const restingHeartRate = activitySummary?.restingHeartRate
+    ?? heart?.["activities-heart"]?.[0]?.value?.restingHeartRate
+    ?? null;
+  const heartDataset = intraday?.["activities-heart-intraday"]?.dataset ?? [];
+  const latestHeartRate = heartDataset.length > 0
+    ? heartDataset[heartDataset.length - 1]?.value ?? null
+    : restingHeartRate;
+  const activeMinutes = (activitySummary?.veryActiveMinutes ?? 0)
+    + (activitySummary?.fairlyActiveMinutes ?? 0)
+    + (activitySummary?.lightlyActiveMinutes ?? 0);
+  const recoveryScore = sleepMinutes
+    ? clampScore(55 + Math.min(25, sleepMinutes / 18) + Math.max(0, 12 - Math.abs((restingHeartRate ?? 65) - 62)))
+    : null;
+  const stressScore = restingHeartRate
+    ? clampScore(32 + Math.max(0, restingHeartRate - 62))
+    : null;
+
+  return prisma.wearableReading.create({
+    data: {
+      userId,
+      connectionId: connection.id,
+      provider: connection.provider,
+      recordedAt: new Date(),
+      heartRateBpm: latestHeartRate,
+      restingHeartRateBpm: restingHeartRate,
+      hrvMs: null,
+      spo2Percent: null,
+      activeCalories: activitySummary?.activityCalories ?? null,
+      steps: activitySummary?.steps ?? null,
+      sleepMinutes,
+      recoveryScore,
+      stressScore,
+      batteryPercent: null,
+      rawSummary: {
+        source: "fitbit_api",
+        date,
+        active_minutes: activeMinutes,
+        sleep_time_in_bed: sleep?.summary?.totalTimeInBed ?? null,
+        intraday_points: heartDataset.length,
+      },
+    },
+  });
+}
+
+export async function createFitbitAuthorizationUrl(userId: string, redirectPath?: string | null) {
+  if (!env.FITBIT_CLIENT_ID || !env.FITBIT_CLIENT_SECRET) {
+    throw new Error("Credenciais Fitbit nao configuradas");
+  }
+
+  const codeVerifier = base64Url(crypto.randomBytes(48));
+  const codeChallenge = base64Url(crypto.createHash("sha256").update(codeVerifier).digest());
+  const state = base64Url(crypto.randomBytes(32));
+
+  await prisma.wearableOAuthState.create({
+    data: {
+      userId,
+      provider: WearableProvider.FITBIT,
+      state,
+      codeVerifier,
+      redirectPath: redirectPath?.startsWith("/") ? redirectPath : "/wearables",
+      expiresAt: addSeconds(new Date(), 10 * 60),
+    },
+  });
+
+  const url = new URL(FITBIT_AUTH_URL);
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("client_id", env.FITBIT_CLIENT_ID);
+  url.searchParams.set("redirect_uri", fitbitRedirectUri());
+  url.searchParams.set("scope", FITBIT_SCOPES.join(" "));
+  url.searchParams.set("state", state);
+  url.searchParams.set("code_challenge", codeChallenge);
+  url.searchParams.set("code_challenge_method", "S256");
+
+  return url.toString();
+}
+
+export async function completeFitbitAuthorization(input: {
+  code: string;
+  state: string;
+}) {
+  const oauthState = await prisma.wearableOAuthState.findUnique({
+    where: { state: input.state },
+  });
+
+  if (!oauthState || oauthState.provider !== WearableProvider.FITBIT) {
+    throw new Error("Estado OAuth Fitbit invalido");
+  }
+
+  if (oauthState.usedAt || oauthState.expiresAt.getTime() < Date.now()) {
+    throw new Error("Estado OAuth Fitbit expirado");
+  }
+
+  const token = await exchangeFitbitToken(new URLSearchParams({
+    grant_type: "authorization_code",
+    code: input.code,
+    redirect_uri: fitbitRedirectUri(),
+    code_verifier: oauthState.codeVerifier,
+  }));
+
+  const profile = await fitbitFetch<FitbitProfileResponse>(token.access_token, "/1/user/-/profile.json").catch(() => null);
+  const accountLabel = profile?.user?.displayName || profile?.user?.fullName || token.user_id;
+
+  await prisma.wearableOAuthState.update({
+    where: { id: oauthState.id },
+    data: { usedAt: new Date() },
+  });
+
+  await connectWearable({
+    userId: oauthState.userId,
+    provider: WearableProvider.FITBIT,
+    deviceName: providerDeviceNames[WearableProvider.FITBIT],
+    externalAccountLabel: accountLabel,
+    accessToken: token.access_token,
+    refreshToken: token.refresh_token,
+    tokenExpiresAt: addSeconds(new Date(), token.expires_in),
+    scopes: token.scope?.split(" ") ?? FITBIT_SCOPES,
+  });
+
+  return oauthState.redirectPath || "/wearables";
+}
+
 export async function createWearableReading(userId: string, connection: WearableConnection) {
+  if (connection.provider === WearableProvider.FITBIT && connection.accessTokenEncrypted) {
+    try {
+      return await createFitbitReading(userId, connection);
+    } catch (error) {
+      await prisma.wearableNotification.create({
+        data: {
+          userId,
+          type: WearableNotificationType.SYNC,
+          severity: WearableNotificationSeverity.WARNING,
+          title: "Sincronizacao Fitbit parcial",
+          message: "Nao conseguimos ler todos os dados reais da Fitbit agora. Mantivemos uma ficha temporaria e tentaremos novamente na proxima sincronizacao.",
+          metadata: {
+            provider: "fitbit",
+            error: error instanceof Error ? error.message : "unknown_error",
+          },
+        },
+      });
+    }
+  }
+
   const reading = buildDemoReading(connection.provider);
 
   return prisma.wearableReading.create({
@@ -263,7 +588,7 @@ export async function createWearableReading(userId: string, connection: Wearable
       recordedAt: new Date(),
       ...reading,
       rawSummary: {
-        source: "demo_sync",
+        source: connection.provider === WearableProvider.FITBIT ? "fitbit_fallback_demo" : "demo_sync",
         safety: "No raw OAuth token is exposed through API responses.",
       },
     },

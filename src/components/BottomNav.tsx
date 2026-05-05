@@ -5,7 +5,7 @@ import { useIsAdmin } from '@/hooks/useAdmin';
 
 const baseNavItems = [
   { to: '/', icon: Home, label: 'Início' },
-  { to: '/workouts', icon: BookOpen, label: 'Treinos' },
+  { to: '/workouts', icon: BookOpen, label: 'Caderno' },
   { to: '/wearables', icon: Watch, label: 'Relógio' },
   { to: '/appointments', icon: Calendar, label: 'Consultas' },
   { to: '/profile', icon: User, label: 'Perfil' },

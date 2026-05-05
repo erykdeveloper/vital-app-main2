@@ -137,6 +137,7 @@ model User {
   wearableConnections WearableConnection[]
   wearableReadings    WearableReading[]
   wearableNotifications WearableNotification[]
+  wearableOAuthStates WearableOAuthState[]
 }
 
 model Profile {
@@ -551,6 +552,22 @@ model WearableNotification {
   @@index([userId, isRead, createdAt])
   @@index([type])
   @@index([severity])
+}
+
+model WearableOAuthState {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @db.Uuid
+  provider     WearableProvider
+  state        String           @unique
+  codeVerifier String
+  redirectPath String?
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime         @default(now())
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider, expiresAt])
+  @@index([expiresAt])
 }
 
 model AuditLog {

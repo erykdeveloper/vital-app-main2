@@ -38,7 +38,8 @@ function formatTimelineLabel(label: string, period: ReportPeriod) {
 export default function WorkoutDashboard() {
   const { profile, loading: profileLoading } = useProfile();
   const [period, setPeriod] = useState<ReportPeriod>("weekly");
-  const { report, loading, error } = useReports(period);
+  const hasPaidStatsAccess = Boolean(profile?.is_premium);
+  const { report, loading, error } = useReports(period, hasPaidStatsAccess);
 
   const chartData = useMemo(() => {
     if (!report) return [];
@@ -57,7 +58,7 @@ export default function WorkoutDashboard() {
     );
   }
 
-  if (!profile?.is_premium) {
+  if (!hasPaidStatsAccess) {
     return (
       <div className="min-h-full bg-[linear-gradient(180deg,#2a1035_0%,#31123f_100%)]">
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
@@ -67,8 +68,8 @@ export default function WorkoutDashboard() {
                 <ArrowLeft className="h-5 w-5" />
               </Link>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Relatórios Premium</h1>
-                <p className="text-sm text-muted-foreground">Desbloqueie análises semanais, mensais e anuais da sua evolução.</p>
+                <h1 className="text-3xl font-bold tracking-tight">Estatísticas Premium</h1>
+                <p className="text-sm text-muted-foreground">O caderno de treinos é gratuito. As análises semanais, mensais e anuais são pagas.</p>
               </div>
             </div>
           </header>
@@ -78,9 +79,9 @@ export default function WorkoutDashboard() {
               <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
                 <Crown className="h-10 w-10" />
               </div>
-              <h2 className="text-3xl font-semibold">Seus relatórios avançados ficam aqui</h2>
+              <h2 className="text-3xl font-semibold">Suas estatísticas avançadas ficam aqui</h2>
               <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                Compare treinos, calorias, distância, minutos ativos e progresso corporal com uma leitura muito mais completa da sua rotina.
+                Compare treinos, calorias, distância, minutos ativos e progresso corporal com uma leitura completa da sua rotina.
               </p>
               <div className="mt-8 grid gap-4 text-left md:grid-cols-3">
                 <div className="rounded-[1.5rem] border border-white/5 bg-[hsl(var(--card))] p-5">
@@ -116,7 +117,7 @@ export default function WorkoutDashboard() {
                 <ArrowLeft className="h-5 w-5" />
               </Link>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Relatórios Premium</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Estatísticas Premium</h1>
                 <p className="text-sm text-muted-foreground">Acompanhe sua evolução por semana, mês ou ano com dados consolidados.</p>
               </div>
             </div>

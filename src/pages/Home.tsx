@@ -317,7 +317,7 @@ const searchItems = [
   { label: "Configurações", description: "Editar cadastro e medidas", to: "/settings", icon: UserCircle2 },
   { label: "Treinos", description: "Registrar uma nova atividade", to: "/workouts", icon: Zap },
   { label: "Histórico de treinos", description: "Ver treinos registrados", to: "/workouts/history", icon: BarChart3 },
-  { label: "Estatísticas", description: "Relatórios e evolução", to: "/workouts/dashboard", icon: BarChart3 },
+  { label: "Estatísticas Premium", description: "Relatórios pagos e evolução", to: "/workouts/dashboard", icon: BarChart3 },
   { label: "Relógio", description: "Conectar wearable e gerar ficha vital", to: "/wearables", icon: Watch },
   { label: "Conquistas", description: "Badges desbloqueados", to: "/premium", icon: Trophy },
   { label: "Agendamentos", description: "Consultas e bioimpedância", to: "/appointments", icon: CalendarCheck },
@@ -761,7 +761,7 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-2xl font-semibold">Resumo da Semana</h2>
             <Link to="/workouts/dashboard" className="text-lg font-medium text-primary">
-              Ver todas
+              Ver Premium
             </Link>
           </div>
 

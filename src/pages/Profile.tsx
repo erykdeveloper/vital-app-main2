@@ -331,7 +331,7 @@ export default function Profile() {
               </div>
               <div className="min-w-0">
                 <span className="font-medium block truncate">Desempenho</span>
-                <span className="text-xs text-muted-foreground">Estatísticas</span>
+                <span className="text-xs text-muted-foreground">Estatísticas Premium</span>
               </div>
             </div>
           </Link>

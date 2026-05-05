@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -16,7 +16,7 @@ import {
   Smartphone,
   Watch,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useBioimpedance } from "@/hooks/useBioimpedance";
@@ -152,12 +152,14 @@ export default function Wearables() {
     syncing,
     saving,
     connect,
+    connectFitbit,
     sync,
     disconnect,
     markNotificationRead,
     markAllNotificationsRead,
   } = useWearables();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
 
   const selectedProvider = providers.find((provider) => provider.id === connection?.provider);
   const weightDiff = getDifference(latestRecord?.weight_kg ?? null, previousRecord?.weight_kg ?? null);
@@ -175,6 +177,20 @@ export default function Wearables() {
   const battery = latestReading?.battery_percent ?? null;
 
   const handleConnect = async (provider: (typeof providers)[number]) => {
+    if (provider.id === "fitbit") {
+      const result = await connectFitbit();
+
+      if (result.error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao iniciar Fitbit",
+          description: result.error,
+        });
+      }
+
+      return;
+    }
+
     const result = await connect({
       provider: provider.id,
       device_name: provider.deviceName,
@@ -194,6 +210,23 @@ export default function Wearables() {
       description: `${provider.name} foi salvo no banco e sincronizado com segurança.`,
     });
   };
+
+  useEffect(() => {
+    const fitbitStatus = searchParams.get("fitbit");
+    if (fitbitStatus === "connected") {
+      toast({
+        title: "Fitbit conectado",
+        description: "A autorizacao foi concluida e os dados foram sincronizados.",
+      });
+    }
+    if (fitbitStatus === "error" || fitbitStatus === "denied") {
+      toast({
+        variant: "destructive",
+        title: "Fitbit nao conectado",
+        description: searchParams.get("error") || "A autorizacao nao foi concluida.",
+      });
+    }
+  }, [searchParams, toast]);
 
   const handleDisconnect = async () => {
     const result = await disconnect();

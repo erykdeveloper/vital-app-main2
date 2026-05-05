@@ -34,16 +34,17 @@ export interface PremiumReport {
   } | null;
 }
 
-export function useReports(period: ReportPeriod) {
+export function useReports(period: ReportPeriod, enabled = true) {
   const { user } = useAuth();
   const [report, setReport] = useState<PremiumReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
+    if (!user || !enabled) {
       setReport(null);
       setLoading(false);
+      setError(null);
       return;
     }
 
@@ -74,7 +75,7 @@ export function useReports(period: ReportPeriod) {
     return () => {
       mounted = false;
     };
-  }, [period, user]);
+  }, [enabled, period, user]);
 
   return {
     report,

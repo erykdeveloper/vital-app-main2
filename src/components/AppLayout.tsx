@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const patientNavItems = [
   { to: "/", icon: Heart, label: "Dashboard" },
-  { to: "/workouts", icon: Dumbbell, label: "Treinos" },
+  { to: "/workouts", icon: Dumbbell, label: "Caderno" },
   { to: "/workouts/dashboard", icon: BarChart3, label: "Estatísticas" },
   { to: "/wearables", icon: Watch, label: "Relógio" },
   { to: "/premium", icon: Trophy, label: "Conquistas" },

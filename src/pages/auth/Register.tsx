@@ -422,7 +422,7 @@ export default function Register() {
               <div>
                 <h2 className="font-semibold">Escolha seu plano ao criar a conta</h2>
                 <p className="text-sm text-muted-foreground">
-                  Você pode entrar no Essencial agora ou já seguir direto para a compra do Premium.
+                  Você pode usar o caderno de treinos gratuito ou seguir direto para as estatísticas Premium.
                 </p>
               </div>
 
@@ -434,8 +434,8 @@ export default function Register() {
                 <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 hover:bg-secondary/30">
                   <RadioGroupItem value="essential" className="mt-1" />
                   <div>
-                    <p className="font-medium">Plano Essencial</p>
-                    <p className="text-sm text-muted-foreground">Cria a conta e entra no app sem cobrança imediata.</p>
+                    <p className="font-medium">Caderno de treinos gratuito</p>
+                    <p className="text-sm text-muted-foreground">Cria a conta sem cobrança para registrar e consultar seus treinos.</p>
                   </div>
                 </Label>
 
@@ -444,7 +444,7 @@ export default function Register() {
                   <div>
                     <p className="font-medium">Quero ser Premium agora</p>
                     <p className="text-sm text-muted-foreground">
-                      A conta é criada e você segue direto para finalizar o pagamento.
+                      A conta é criada e você segue direto para finalizar o pagamento das estatísticas.
                     </p>
                   </div>
                 </Label>
