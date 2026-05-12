@@ -3,8 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
   BarChart3,
+  Bike,
   CalendarCheck,
+  Clock,
+  Dumbbell,
   Flame,
+  Footprints,
   Heart,
   Search,
   Sparkles,
@@ -24,14 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { useAchievements } from "@/hooks/useAchievements";
@@ -237,6 +233,8 @@ function RecommendationCard({
   to,
   className,
   imagePosition,
+  duration = "30 min",
+  calories = "125 kcal",
 }: {
   label: string;
   title: string;
@@ -244,6 +242,8 @@ function RecommendationCard({
   to: string;
   className: string;
   imagePosition?: string;
+  duration?: string;
+  calories?: string;
 }) {
   return (
     <Link
@@ -274,7 +274,80 @@ function RecommendationCard({
             {title}
           </h3>
           <p className="max-w-xs text-sm leading-relaxed text-white/75">{description}</p>
+          <div className="flex items-center gap-3 pt-1 text-xs font-medium text-white/80">
+            <span className="inline-flex items-center gap-1">
+              <Flame className="h-3.5 w-3.5" />
+              {calories}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {duration}
+            </span>
+          </div>
         </div>
+      </div>
+    </Link>
+  );
+}
+
+function QuickCategoryLink({
+  to,
+  icon: Icon,
+  label,
+  imagePosition,
+}: {
+  to: string;
+  icon: React.ElementType;
+  label: string;
+  imagePosition: string;
+}) {
+  return (
+    <Link to={to} className="group flex min-w-[72px] flex-col items-center gap-3 text-center">
+      <span className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-full border border-white/5 bg-secondary shadow-elegant">
+        <span
+          className="absolute inset-0 bg-cover bg-no-repeat opacity-45 transition-transform duration-300 group-hover:scale-110"
+          style={{
+            backgroundImage: "url('/images/workout-examples-ai.jpg')",
+            backgroundPosition: imagePosition,
+            backgroundSize: "250% auto",
+          }}
+        />
+        <span className="absolute inset-0 bg-background/45" />
+        <Icon className="relative h-6 w-6 text-primary" />
+      </span>
+      <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
+        {label}
+      </span>
+    </Link>
+  );
+}
+
+function PracticeBanner() {
+  return (
+    <Link
+      to="/workouts"
+      className="group relative min-h-[164px] overflow-hidden rounded-[1.35rem] border border-primary/20 bg-primary/12 p-5 shadow-elegant"
+    >
+      <div
+        className="absolute bottom-0 right-[-22px] top-0 w-[58%] bg-cover bg-no-repeat opacity-75 transition-transform duration-300 group-hover:scale-105"
+        style={{
+          backgroundImage: "url('/images/workout-examples-ai.jpg')",
+          backgroundPosition: "right top",
+          backgroundSize: "245% auto",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-card via-card/85 to-card/5" />
+      <div className="relative flex max-w-[180px] flex-col items-start gap-3">
+        <span className="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">
+          Plano em destaque
+        </span>
+        <div>
+          <h2 className="text-2xl font-bold leading-tight">Eleve sua prática</h2>
+          <p className="mt-2 text-sm font-medium text-muted-foreground">6 semanas · 24 treinos</p>
+        </div>
+        <span className="inline-flex h-9 items-center justify-center rounded-xl bg-primary px-5 text-sm font-bold text-primary-foreground">
+          Começar
+        </span>
       </div>
     </Link>
   );
@@ -321,6 +394,13 @@ const searchItems = [
   { label: "Relógio", description: "Conectar wearable e gerar ficha vital", to: "/wearables", icon: Watch },
   { label: "Conquistas", description: "Badges desbloqueados", to: "/premium", icon: Trophy },
   { label: "Agendamentos", description: "Consultas e bioimpedância", to: "/appointments", icon: CalendarCheck },
+];
+
+const quickCategories = [
+  { label: "Força", to: "/workouts/musculacao/academia", icon: Dumbbell, imagePosition: "left top" },
+  { label: "Cardio", to: "/workouts/cardio/corrida", icon: Footprints, imagePosition: "center top" },
+  { label: "HIIT", to: "/workouts/cardio/hiit", icon: Zap, imagePosition: "right center" },
+  { label: "Bike", to: "/workouts/cardio/ciclismo", icon: Bike, imagePosition: "left bottom" },
 ];
 
 export default function Home() {
@@ -571,40 +651,16 @@ export default function Home() {
               <Search className="h-5 w-5" />
             </button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
-                aria-label="Notificações"
-              >
-                <Bell className="h-5 w-5" />
-                {notifications.length > 0 ? (
-                  <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
-                ) : null}
-              </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-80 rounded-2xl border-white/10 bg-[hsl(var(--card))] p-2">
-                <DropdownMenuLabel>Notificações</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.length > 0 ? (
-                  notifications.map((notification) => (
-                    <DropdownMenuItem
-                      key={notification.title}
-                      className="cursor-pointer items-start rounded-xl p-3"
-                      onClick={() => navigate(notification.to)}
-                    >
-                      <div>
-                        <p className="font-medium">{notification.title}</p>
-                        <p className="text-xs leading-relaxed text-muted-foreground">{notification.description}</p>
-                      </div>
-                    </DropdownMenuItem>
-                  ))
-                ) : (
-                  <div className="px-3 py-4 text-sm text-muted-foreground">Tudo em dia por aqui.</div>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link
+              to="/notifications"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Notificações"
+            >
+              <Bell className="h-5 w-5" />
+              {notifications.length > 0 ? (
+                <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
+              ) : null}
+            </Link>
           </div>
         </header>
 
@@ -650,6 +706,40 @@ export default function Home() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold md:text-2xl">Categorias</h2>
+            <Link to="/workouts" className="text-sm font-semibold text-primary md:text-base">
+              Ver todas
+            </Link>
+          </div>
+          <div className="flex justify-between gap-4 overflow-x-auto pb-1 hide-scrollbar md:justify-start md:gap-8">
+            {quickCategories.map((category) => (
+              <QuickCategoryLink key={category.to} {...category} />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="text-xl font-semibold md:text-2xl">Treinos populares</h2>
+            <Link to="/workouts" className="text-sm font-semibold text-primary md:text-base">
+              Ver todos
+            </Link>
+          </div>
+          <div className="flex gap-4 overflow-x-auto pb-1 hide-scrollbar md:grid md:grid-cols-2 xl:grid-cols-4">
+            {recommendationCards.map((card) => (
+              <RecommendationCard
+                key={card.title}
+                {...card}
+                className={cn("min-w-[154px] md:min-w-0", card.className)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <PracticeBanner />
 
         <section className="grid gap-4 xl:grid-cols-4">
           <TopMetricCard
@@ -790,24 +880,6 @@ export default function Home() {
               helper={achievements.length > 0 ? `de ${achievements.length} conquistas` : "catálogo em atualização"}
               progress={achievementProgress}
             />
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold">Treinos Recomendados</h2>
-              <p className="text-base text-muted-foreground">Escolhas rápidas para manter seu ritmo.</p>
-            </div>
-            <Link to="/workouts" className="text-lg font-medium text-primary">
-              Ver todos
-            </Link>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {recommendationCards.map((card) => (
-              <RecommendationCard key={card.title} {...card} />
-            ))}
           </div>
         </section>
 

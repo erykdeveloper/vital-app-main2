@@ -19,23 +19,34 @@ export function BottomNav() {
     : baseNavItems;
 
   return (
-    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl md:hidden">
-      <div className="flex items-center justify-around h-16 px-2">
+    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-background/70 px-3 pb-2 backdrop-blur-xl md:hidden">
+      <div className="mx-auto flex h-[72px] max-w-[430px] items-center justify-around rounded-[1.6rem] border border-white/5 bg-card/95 px-2 shadow-elegant">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 transition-all duration-200',
+                'flex min-w-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all duration-200',
                 isActive
-                  ? 'bg-primary/12 text-primary shadow-glow'
+                  ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
               )
             }
           >
-            <item.icon className="w-5 h-5" />
-            <span className="text-xs font-medium">{item.label}</span>
+            {({ isActive }) => (
+              <>
+                <span
+                  className={cn(
+                    'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
+                    isActive ? 'bg-primary text-primary-foreground shadow-glow' : 'bg-transparent'
+                  )}
+                >
+                  <item.icon className="h-[18px] w-[18px]" />
+                </span>
+                <span className="text-[11px] font-medium leading-none">{item.label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>

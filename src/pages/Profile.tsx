@@ -1,5 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Edit, Save, X, Trophy, BarChart3, Scale, ArrowLeft, Camera } from 'lucide-react';
+import type { ElementType } from 'react';
+import {
+  ArrowLeft,
+  BarChart3,
+  Camera,
+  ChevronRight,
+  Crown,
+  Dumbbell,
+  Edit,
+  HelpCircle,
+  Save,
+  Scale,
+  Settings as SettingsIcon,
+  Trophy,
+  User,
+  Watch,
+  X,
+} from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +27,62 @@ import { useAchievements } from '@/hooks/useAchievements';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { handleIntegerKeyDown, handleDecimalKeyDown, sanitizeInteger, sanitizeDecimal } from '@/lib/inputValidation';
+
+type AccountAction = {
+  to: string;
+  label: string;
+  description: string;
+  icon: ElementType;
+};
+
+const primaryActions: AccountAction[] = [
+  { to: '/settings', label: 'Dados pessoais', description: 'Editar conta e notificações', icon: User },
+  { to: '/premium', label: 'Premium Vitalissy', description: 'Plano, benefícios e pagamentos', icon: Crown },
+];
+
+const healthActions: AccountAction[] = [
+  { to: '/workouts', label: 'Treinos', description: 'Caderno e categorias', icon: Dumbbell },
+  { to: '/wearables', label: 'Relógio e saúde', description: 'Sincronização e alertas', icon: Watch },
+  { to: '/body-progress', label: 'Evolução corporal', description: 'Peso, medidas e fotos', icon: Scale },
+  { to: '/workouts/dashboard', label: 'Desempenho', description: 'Estatísticas e progresso', icon: BarChart3 },
+];
+
+const supportActions: AccountAction[] = [
+  { to: '/notifications', label: 'Notificações', description: 'Alertas e novidades', icon: SettingsIcon },
+  { to: '/appointments', label: 'Consultas', description: 'Solicitações e histórico', icon: HelpCircle },
+];
+
+function AccountActionRow({ action }: { action: AccountAction }) {
+  const Icon = action.icon;
+
+  return (
+    <Link
+      to={action.to}
+      className="group flex items-center justify-between gap-4 border-b border-white/10 py-4 last:border-b-0"
+    >
+      <div className="flex min-w-0 items-center gap-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary/80 text-primary">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-foreground">{action.label}</span>
+          <span className="block truncate text-xs text-muted-foreground">{action.description}</span>
+        </span>
+      </div>
+      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+    </Link>
+  );
+}
+
+function AccountGroup({ actions }: { actions: AccountAction[] }) {
+  return (
+    <div className="rounded-2xl border border-white/5 bg-card/85 px-4 shadow-elegant">
+      {actions.map((action) => (
+        <AccountActionRow key={action.to} action={action} />
+      ))}
+    </div>
+  );
+}
 
 export default function Profile() {
   const { profile, loading, uploading, updateProfile, uploadAvatar } = useProfile();
@@ -160,30 +233,32 @@ export default function Profile() {
   }
 
   return (
-    <div className="p-4 pb-24 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-6 h-6" />
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 pb-28 pt-4 md:pb-8 md:pt-7">
+      <header className="relative flex h-12 items-center justify-center">
+        <Link
+          to="/"
+          className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-2xl font-bold">Meu Perfil</h1>
-      </div>
+        <h1 className="text-base font-bold">Perfil</h1>
+      </header>
 
-      {/* Profile Card */}
-      <div className="bg-card rounded-2xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant md:p-5">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div 
               className="relative cursor-pointer group"
               onClick={handleAvatarClick}
             >
-              <Avatar className="w-16 h-16 border-2 border-accent/30">
+              <Avatar className="h-16 w-16 border-2 border-primary/30">
                 <AvatarImage 
                   src={avatarPreview || profile?.avatar_url || undefined} 
                   alt={profile?.full_name}
                   className="object-cover"
                 />
-                <AvatarFallback className="bg-accent/20 text-accent text-xl">
+                <AvatarFallback className="bg-primary/15 text-primary text-xl">
                   {profile?.full_name?.charAt(0)?.toUpperCase() || <User className="w-8 h-8" />}
                 </AvatarFallback>
               </Avatar>
@@ -204,8 +279,8 @@ export default function Profile() {
               onChange={handleFileSelect}
             />
             <div>
-              <h2 className="text-lg font-semibold">{profile?.full_name}</h2>
-              <p className="text-sm text-muted-foreground">{profile?.email}</p>
+              <h2 className="line-clamp-1 text-base font-bold">{profile?.full_name}</h2>
+              <p className="line-clamp-1 text-sm text-muted-foreground">{profile?.phone || profile?.email}</p>
             </div>
           </div>
           {!editing && (
@@ -215,15 +290,25 @@ export default function Profile() {
           )}
         </div>
 
+        {!editing && (
+          <Link
+            to="/premium"
+            className="mt-4 flex h-14 items-center justify-center gap-3 rounded-xl bg-gradient-primary text-sm font-bold text-primary-foreground shadow-glow transition-opacity hover:opacity-95"
+          >
+            <Crown className="h-5 w-5" />
+            {profile?.is_premium ? 'Premium ativo' : 'GO PREMIUM'}
+          </Link>
+        )}
+
         {editing ? (
-          <div className="space-y-4">
+          <div className="mt-5 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nome completo</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
@@ -232,14 +317,14 @@ export default function Profile() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div 
               ref={bmiFieldsRef}
               className={cn(
                 "grid grid-cols-3 gap-3 p-2 -m-2 rounded-xl transition-all duration-500",
-                highlightBMI && "ring-2 ring-accent bg-accent/10"
+                highlightBMI && "ring-2 ring-primary bg-primary/10"
               )}
             >
               <div className="space-y-2">
@@ -252,7 +337,7 @@ export default function Profile() {
                   value={formData.age}
                   onKeyDown={handleIntegerKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, age: sanitizeInteger(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
               <div className="space-y-2">
@@ -265,7 +350,7 @@ export default function Profile() {
                   value={formData.height_cm}
                   onKeyDown={handleIntegerKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, height_cm: sanitizeInteger(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
               <div className="space-y-2">
@@ -278,7 +363,7 @@ export default function Profile() {
                   value={formData.weight_kg}
                   onKeyDown={handleDecimalKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, weight_kg: sanitizeDecimal(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
             </div>
@@ -294,7 +379,7 @@ export default function Profile() {
               </Button>
               <Button
                 onClick={handleSave}
-                className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                className="flex-1 bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-95"
                 disabled={saving}
               >
                 <Save className="w-4 h-4 mr-2" />
@@ -303,59 +388,38 @@ export default function Profile() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.age}</p>
+          <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-2xl bg-secondary/70 p-3">
+              <p className="text-2xl font-bold text-primary">{profile?.age}</p>
               <p className="text-xs text-muted-foreground">anos</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.height_cm}</p>
+            <div className="rounded-2xl bg-secondary/70 p-3">
+              <p className="text-2xl font-bold text-primary">{profile?.height_cm}</p>
               <p className="text-xs text-muted-foreground">cm</p>
             </div>
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.weight_kg}</p>
+            <div className="rounded-2xl bg-secondary/70 p-3">
+              <p className="text-2xl font-bold text-primary">{profile?.weight_kg}</p>
               <p className="text-xs text-muted-foreground">kg</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Meu Progresso Section */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">Meu Progresso</h2>
-        <div className="grid grid-cols-2 gap-3">
-          <Link to="/workouts/dashboard" className="h-full">
-            <div className="bg-card rounded-xl p-4 h-full min-h-[80px] flex items-center gap-3 hover:bg-secondary transition-colors">
-              <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center shrink-0">
-                <BarChart3 className="w-6 h-6 text-accent" />
-              </div>
-              <div className="min-w-0">
-                <span className="font-medium block truncate">Desempenho</span>
-                <span className="text-xs text-muted-foreground">Estatísticas Premium</span>
-              </div>
-            </div>
-          </Link>
-          <Link to="/body-progress" className="h-full">
-            <div className="bg-card rounded-xl p-4 h-full min-h-[80px] flex items-center gap-3 hover:bg-secondary transition-colors">
-              <div className="w-12 h-12 bg-accent/20 rounded-full flex items-center justify-center shrink-0">
-                <Scale className="w-6 h-6 text-accent" />
-              </div>
-              <div className="min-w-0">
-                <span className="font-medium block truncate">Corpo</span>
-                <span className="text-xs text-muted-foreground">Peso e medidas</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-      </div>
+      {!editing && (
+        <>
+          <AccountGroup actions={primaryActions} />
+          <AccountGroup actions={healthActions} />
+          <AccountGroup actions={supportActions} />
+        </>
+      )}
 
       {/* Conquistas Section */}
       <div className="space-y-3">
         <h2 className="text-lg font-semibold flex items-center gap-2">
-          <Trophy className="w-5 h-5 text-accent" />
+          <Trophy className="w-5 h-5 text-primary" />
           Conquistas
         </h2>
-        <div className="bg-card rounded-xl p-4">
+        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-4 shadow-elegant">
           {achievements && achievements.length > 0 ? (
             <div className="grid grid-cols-4 gap-4">
               {achievements.map((achievement) => {
@@ -372,7 +436,7 @@ export default function Profile() {
                   >
                     <div className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center text-2xl",
-                      isUnlocked ? "bg-accent/20" : "bg-muted"
+                      isUnlocked ? "bg-primary/15" : "bg-muted"
                     )}>
                       {achievement.icon || '🏆'}
                     </div>

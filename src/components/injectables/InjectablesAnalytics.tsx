@@ -139,7 +139,7 @@ export function InjectablesAnalytics({ injectables }: Props) {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card rounded-2xl p-4">
+        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Syringe className="w-4 h-4" />
             <span className="text-xs">Este mês</span>
@@ -147,7 +147,7 @@ export function InjectablesAnalytics({ injectables }: Props) {
           <p className="text-2xl font-bold">{analytics.totalThisMonth}</p>
           <p className="text-xs text-muted-foreground">aplicações</p>
         </div>
-        <div className="bg-card rounded-2xl p-4">
+        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <TrendingUp className="w-4 h-4" />
             <span className="text-xs">Consistência</span>
@@ -159,7 +159,7 @@ export function InjectablesAnalytics({ injectables }: Props) {
 
       {/* Next Injection Countdown */}
       {analytics.nextInjection && analytics.daysUntilNext !== null && (
-        <div className="bg-card rounded-2xl p-4">
+        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-2">
             <Calendar className="w-4 h-4" />
             <span className="text-sm font-medium">Próxima aplicação agendada</span>
@@ -171,8 +171,8 @@ export function InjectablesAnalytics({ injectables }: Props) {
                 {format(parseISO(analytics.nextInjection.date), "dd 'de' MMMM", { locale: ptBR })}
               </p>
             </div>
-            <div className="bg-accent/20 rounded-xl px-4 py-2 text-center">
-              <p className="text-2xl font-bold text-accent">
+            <div className="bg-primary/15 rounded-xl px-4 py-2 text-center">
+              <p className="text-2xl font-bold text-primary">
                 {analytics.daysUntilNext === 0 ? 'Hoje' : analytics.daysUntilNext}
               </p>
               {analytics.daysUntilNext > 0 && (
@@ -187,7 +187,7 @@ export function InjectablesAnalytics({ injectables }: Props) {
 
       {/* Monthly Chart */}
       {analytics.chartData.length > 0 && (
-        <div className="bg-card rounded-2xl p-4">
+        <div className="rounded-[2rem] border border-white/5 bg-card/85 p-4">
           <p className="text-sm font-medium text-muted-foreground mb-4">
             Aplicações em {format(new Date(), 'MMMM', { locale: ptBR })}
           </p>

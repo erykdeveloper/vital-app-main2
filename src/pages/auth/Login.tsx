@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Eye, EyeOff, Heart } from 'lucide-react';
+import { Apple, Eye, EyeOff, Heart, Lock, Mail, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,7 @@ export default function Login() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-accent" />
       </div>
     );
   }
@@ -47,69 +47,149 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-8">
-        <div className="text-center space-y-2">
-          <div className="w-20 h-20 mx-auto bg-accent rounded-full flex items-center justify-center mb-4">
-            <Heart className="w-10 h-10 text-accent-foreground" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Vitalissy</h1>
-          <p className="text-muted-foreground">Saúde & Performance</p>
-          <p className="text-xs text-muted-foreground/70">Dra. Gabriela Zinhani Issy</p>
-          <p className="text-xs text-muted-foreground/70">CRM GO 33159 / SP 254121</p>
-        </div>
-
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="bg-background border-border focus-visible:ring-offset-0"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-background border-border pr-10 focus-visible:ring-offset-0"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
-            disabled={loading}
+    <div className="min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-6 pb-7 pt-10">
+        <header className="flex h-14 items-center justify-between">
+          <Link
+            to="/onboarding"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Voltar"
           >
-            {loading ? 'Entrando...' : 'Entrar'}
-          </Button>
-        </form>
-
-        <p className="text-center text-muted-foreground">
-          Não tem conta?{' '}
-          <Link to="/registro" className="text-accent hover:underline font-medium">
-            Criar conta
+            <X className="h-5 w-5" />
           </Link>
-        </p>
+
+          <div className="flex items-center gap-2 rounded-full border border-white/5 bg-card/80 px-3 py-2 shadow-elegant">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-primary text-primary-foreground shadow-glow">
+              <Heart className="h-4 w-4" />
+            </span>
+            <span className="text-sm font-semibold">Vitalissy</span>
+          </div>
+        </header>
+
+        <main className="flex flex-1 flex-col pt-12">
+          <div className="space-y-2">
+            <h1 className="text-[2rem] font-bold leading-tight tracking-normal">Entrar</h1>
+            <p className="text-base leading-relaxed text-muted-foreground">
+              Acesse sua rotina de saúde e performance.
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                toast({
+                  title: 'Login social indisponível',
+                  description: 'Entre com email e senha para acessar sua conta.',
+                })
+              }
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
+            >
+              <Apple className="h-5 w-5" />
+              Entrar com Apple
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                toast({
+                  title: 'Login social indisponível',
+                  description: 'Entre com email e senha para acessar sua conta.',
+                })
+              }
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
+            >
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                G
+              </span>
+              Entrar com Google
+            </button>
+          </div>
+
+          <div className="my-7 flex items-center gap-4 text-sm text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            <span>Ou entre com email</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="grid gap-3">
+              <div className="relative">
+                <Label htmlFor="email" className="sr-only">
+                  Email
+                </Label>
+                <Mail className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 pl-12 pr-4 text-base placeholder:text-muted-foreground focus-visible:ring-offset-0"
+                />
+              </div>
+
+              <div className="relative">
+                <Label htmlFor="password" className="sr-only">
+                  Senha
+                </Label>
+                <Lock className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 pl-12 pr-12 text-base placeholder:text-muted-foreground focus-visible:ring-offset-0"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95"
+              disabled={loading}
+            >
+              {loading ? 'Entrando...' : 'Entrar'}
+            </Button>
+          </form>
+
+          <button
+            type="button"
+            onClick={() =>
+              toast({
+                title: 'Recuperação de senha em breve',
+                description: 'Por enquanto, fale com o suporte para redefinir seu acesso.',
+              })
+            }
+            className="mt-7 block text-center text-base font-semibold text-primary transition-colors hover:text-primary/85"
+          >
+            Esqueci minha senha
+          </button>
+
+          <div className="mt-auto space-y-3 pb-3 pt-12 text-center">
+            <p className="text-xs leading-relaxed text-muted-foreground/75">
+              Saúde & Performance<br />
+              Dra. Gabriela Zinhani Issy<br />
+              CRM GO 33159 / SP 254121
+            </p>
+            <p className="text-base text-foreground">
+              Não tem conta?{' '}
+              <Link to="/registro" className="font-semibold text-primary hover:underline">
+                Criar conta
+              </Link>
+            </p>
+          </div>
+        </main>
       </div>
     </div>
   );

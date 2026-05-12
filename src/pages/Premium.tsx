@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Crown, Check, CreditCard, QrCode } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowLeft, Crown, Check, CreditCard, QrCode, Sparkles, Star, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { api } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useProfile } from '@/hooks/useProfile';
 
 const benefits = [
   {
@@ -73,8 +75,20 @@ const formatCurrency = (priceCents: number, currency: string) =>
     currency,
   }).format(priceCents / 100);
 
+function FeatureRow({ children }: { children: ReactNode }) {
+  return (
+    <li className="flex items-start gap-3 text-sm leading-relaxed text-muted-foreground">
+      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+        <Check className="h-3.5 w-3.5" />
+      </span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
 export default function Premium() {
   const { toast } = useToast();
+  const { profile } = useProfile();
   const location = useLocation();
   const [product, setProduct] = useState<PaymentProduct | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
@@ -84,6 +98,7 @@ export default function Premium() {
   const registerFlowState = location.state as
     | { autostartCheckout?: boolean; paymentMethod?: 'pix' | 'credit_card'; fromRegister?: boolean }
     | null;
+  const isPremiumActive = Boolean(profile?.is_premium);
 
   useEffect(() => {
     if (registerFlowState?.paymentMethod) {
@@ -152,6 +167,14 @@ export default function Premium() {
   }, [toast]);
 
   async function handleCheckout() {
+    if (isPremiumActive) {
+      toast({
+        title: 'Premium ativo',
+        description: 'Seu plano já está liberado na Vitalissy.',
+      });
+      return;
+    }
+
     if (!product) {
       toast({
         title: 'Plano indisponivel',
@@ -190,6 +213,7 @@ export default function Premium() {
   }
 
   useEffect(() => {
+    if (isPremiumActive) return;
     if (!registerFlowState?.autostartCheckout) return;
     if (autoCheckoutTriggeredRef.current) return;
     if (isLoading || !product || isCheckoutLoading) return;
@@ -200,90 +224,178 @@ export default function Premium() {
       description: 'Estamos iniciando seu checkout premium.',
     });
     void handleCheckout();
-  }, [isCheckoutLoading, isLoading, product, registerFlowState?.autostartCheckout, toast]);
+  }, [isCheckoutLoading, isLoading, isPremiumActive, product, registerFlowState?.autostartCheckout, toast]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Link to="/" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <h1 className="text-2xl font-bold">Seja Premium</h1>
-      </div>
+    <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
+      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
+        <header className="grid h-14 grid-cols-[44px_1fr_44px] items-center md:hidden">
+          <Link
+            to="/"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-secondary/70 text-muted-foreground transition-colors hover:text-foreground"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-center text-lg font-bold">Premium</h1>
+        </header>
 
-      {/* Hero Card */}
-      <div className="bg-gradient-to-br from-accent/30 to-accent/10 rounded-2xl p-6 text-center space-y-4 border border-accent/30">
-        <div className="w-20 h-20 mx-auto bg-accent rounded-full flex items-center justify-center">
-          <Crown className="w-10 h-10 text-accent-foreground" />
-        </div>
-        <h2 className="text-2xl font-bold">Seja Premium</h2>
-        <p className="text-muted-foreground">
-          O caderno de treinos é gratuito. Assine para desbloquear estatísticas e recursos avançados.
-        </p>
-        <div className="flex items-baseline justify-center gap-1">
-          <span className="text-4xl font-bold text-accent">
-            {isLoading ? '...' : product ? formatCurrency(product.price_cents, product.currency) : 'Indisponivel'}
-          </span>
-          <span className="text-muted-foreground">/mês</span>
-        </div>
-        {registerFlowState?.fromRegister && (
-          <p className="text-sm text-accent">
-            Sua conta já foi criada. Falta só concluir o pagamento para liberar o Premium.
-          </p>
-        )}
-      </div>
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-card/90 p-6 text-center shadow-elegant md:p-8">
+          <div className="absolute inset-x-10 top-0 h-24 rounded-full bg-primary/20 blur-3xl" />
+          <div className="relative mx-auto flex max-w-2xl flex-col items-center gap-5">
+            <Link
+              to="/"
+              className="hidden h-11 w-11 self-start items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-colors hover:text-foreground md:inline-flex"
+              aria-label="Voltar"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] bg-primary/15 text-primary shadow-elegant">
+              <Crown className="h-8 w-8" />
+            </div>
+            <div className="space-y-3">
+              <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                <Sparkles className="h-4 w-4" />
+                Vitalissy Premium
+              </div>
+              <h1 className="text-3xl font-bold leading-tight tracking-normal md:text-5xl">
+                {isPremiumActive ? 'Seu Premium está ativo' : 'Desbloqueie sua evolução completa'}
+              </h1>
+              <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
+                {isPremiumActive
+                  ? 'Você já tem acesso aos recursos avançados, relatórios e acompanhamento completo da Vitalissy.'
+                  : 'Estatísticas avançadas, conquistas, recursos inteligentes e acompanhamento mais profundo em um só plano.'}
+              </p>
+            </div>
+          </div>
+        </section>
 
-      {/* Benefits */}
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold">O que você terá acesso:</h3>
-        <div className="space-y-3">
-          {benefits.map((benefit, index) => (
-            <div key={index} className="flex items-start gap-3 bg-card rounded-xl p-4">
-              <div className="w-8 h-8 bg-accent/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
-                <Check className="w-4 h-4 text-accent" />
+        <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative overflow-hidden rounded-[1.5rem] border border-primary/25 bg-primary p-1 shadow-glow">
+            <div className="flex items-center justify-center gap-2 py-2 text-sm font-bold text-primary-foreground">
+              <Star className="h-4 w-4 fill-current" />
+              {isPremiumActive ? 'Plano ativo' : 'Melhor escolha'}
+            </div>
+            <div className="rounded-[1.25rem] bg-card p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Plano mensal</p>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold text-foreground">
+                      {isLoading ? '...' : product ? formatCurrency(product.price_cents, product.currency) : 'Indisponível'}
+                    </span>
+                    <span className="text-muted-foreground">/mês</span>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {isPremiumActive ? 'Recursos liberados para sua conta.' : 'Cancele quando quiser.'}
+                  </p>
+                </div>
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <Crown className="h-6 w-6" />
+                </span>
+              </div>
+
+              {registerFlowState?.fromRegister && (
+                <p className="mt-5 rounded-2xl border border-primary/20 bg-primary/10 p-3 text-sm text-primary">
+                  Sua conta já foi criada. Falta só concluir o pagamento.
+                </p>
+              )}
+
+              <ul className="mt-6 grid gap-3">
+                <FeatureRow>Relatórios e gráficos premium liberados.</FeatureRow>
+                <FeatureRow>Histórico completo de evolução, treinos e conquistas.</FeatureRow>
+                <FeatureRow>Recursos de acompanhamento avançado no app.</FeatureRow>
+              </ul>
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+            <div className="mb-5 flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                <ShieldCheck className="h-6 w-6" />
+              </span>
+              <div>
+                <h2 className="text-xl font-bold">Incluso no Premium</h2>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Um pacote pensado para manter constância e clareza na sua rotina.
+                </p>
+              </div>
+            </div>
+            <div className="grid gap-3">
+              {benefits.slice(0, 5).map((benefit) => (
+                <div key={benefit.title} className="flex items-center gap-3 rounded-2xl bg-secondary/55 p-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                    <Check className="h-4 w-4" />
+                  </span>
+                  <span className="text-sm font-semibold">{benefit.title}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {benefits.slice(5).map((benefit) => (
+            <div key={benefit.title} className="flex items-start gap-3 rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/15">
+                <Check className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <span className="font-medium">{benefit.title}</span>
-                <p className="text-sm text-muted-foreground mt-0.5">{benefit.description}</p>
+                <span className="font-semibold">{benefit.title}</span>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{benefit.description}</p>
               </div>
             </div>
           ))}
-        </div>
-      </div>
+        </section>
 
-      <div className="bg-card rounded-2xl p-4 space-y-4 border">
-        <div>
-          <h3 className="font-semibold">Forma de pagamento</h3>
-          <p className="text-sm text-muted-foreground">
-            O pagamento sera finalizado em ambiente seguro do gateway. Nao salvamos dados de cartao.
-          </p>
-        </div>
+        {isPremiumActive ? (
+          <section className="rounded-[2rem] border border-primary/20 bg-primary/10 p-5 text-center shadow-elegant">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-glow">
+              <ShieldCheck className="h-7 w-7" />
+            </div>
+            <h3 className="text-xl font-semibold">Tudo certo por aqui</h3>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Seu perfil já está marcado como Premium. Continue usando relatórios, conquistas e histórico completo normalmente.
+            </p>
+          </section>
+        ) : (
+          <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+            <div className="mb-4">
+              <h3 className="text-xl font-semibold">Forma de pagamento</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                O pagamento será finalizado em ambiente seguro do gateway. Não salvamos dados de cartão.
+              </p>
+            </div>
 
-        <RadioGroup
-          value={paymentMethod}
-          onValueChange={(value) => setPaymentMethod(value as 'pix' | 'credit_card')}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-        >
-          <Label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-accent/10">
-            <RadioGroupItem value="pix" />
-            <QrCode className="w-5 h-5 text-accent" />
-            <span>PIX</span>
-          </Label>
-          <Label className="flex items-center gap-3 rounded-xl border p-4 cursor-pointer hover:bg-accent/10">
-            <RadioGroupItem value="credit_card" />
-            <CreditCard className="w-5 h-5 text-accent" />
-            <span>Cartao de credito</span>
-          </Label>
-        </RadioGroup>
-      </div>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as 'pix' | 'credit_card')}
+              className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+            >
+              <Label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 p-4 transition-colors hover:bg-secondary/60">
+                <RadioGroupItem value="pix" />
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <QrCode className="h-5 w-5" />
+                </span>
+                <span className="font-semibold">PIX</span>
+              </Label>
+              <Label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 p-4 transition-colors hover:bg-secondary/60">
+                <RadioGroupItem value="credit_card" />
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <CreditCard className="h-5 w-5" />
+                </span>
+                <span className="font-semibold">Cartão de crédito</span>
+              </Label>
+            </RadioGroup>
+          </section>
+        )}
 
-      <div className="flex justify-center">
-        <Button 
+        <Button
           onClick={handleCheckout}
-          disabled={!product || isLoading || isCheckoutLoading}
-          className="w-full max-w-md bg-accent hover:bg-accent/90 text-accent-foreground font-semibold py-6 rounded-xl"
+          disabled={isPremiumActive || !product || isLoading || isCheckoutLoading}
+          className="h-14 w-full rounded-2xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95"
         >
-          {isCheckoutLoading ? 'Iniciando pagamento...' : 'Assinar agora'}
+          {isPremiumActive ? 'Plano Premium ativo' : isCheckoutLoading ? 'Iniciando pagamento...' : 'Assinar agora'}
         </Button>
       </div>
     </div>

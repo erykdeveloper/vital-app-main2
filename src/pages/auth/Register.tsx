@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Eye, EyeOff, Heart, ArrowLeft } from 'lucide-react';
+import { Apple, Eye, EyeOff, Heart, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -240,20 +240,63 @@ export default function Register() {
     }
   };
 
+  const handleSocialSignup = () => {
+    toast({
+      title: 'Cadastro social indisponível',
+      description: 'Crie sua conta com email para continuar.',
+    });
+  };
+
   return (
-    <div className="h-screen overflow-y-auto bg-background px-6 py-8">
-      <div className="w-full max-w-sm mx-auto space-y-6 pb-12">
-        <div className="flex items-center gap-4">
-          <Link to="/login" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="w-6 h-6" />
+    <div className="h-screen overflow-y-auto bg-background px-6 py-8 text-foreground">
+      <div className="mx-auto w-full max-w-[430px] space-y-6 pb-12">
+        <div className="grid h-14 grid-cols-[44px_1fr_44px] items-center">
+          <Link
+            to="/onboarding"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-xl font-bold">Criar Conta</h1>
+          <h1 className="text-center text-base font-bold">Criar conta</h1>
+          <span />
         </div>
 
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto bg-accent rounded-full flex items-center justify-center mb-2">
-            <Heart className="w-8 h-8 text-accent-foreground" />
+        <div className="space-y-2 pt-3 text-center">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gradient-primary text-primary-foreground shadow-glow">
+            <Heart className="h-7 w-7" />
           </div>
+          <h2 className="text-[2rem] font-bold leading-tight tracking-normal">Comece no Vitalissy</h2>
+          <p className="text-base leading-relaxed text-muted-foreground">
+            Crie seu acesso para registrar treinos e acompanhar sua evolução.
+          </p>
+        </div>
+
+        <div className="grid gap-3">
+          <button
+            type="button"
+            onClick={handleSocialSignup}
+            className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
+          >
+            <Apple className="h-5 w-5" />
+            Criar com Apple
+          </button>
+          <button
+            type="button"
+            onClick={handleSocialSignup}
+            className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+              G
+            </span>
+            Criar com Google
+          </button>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          <span>Ou crie com email</span>
+          <span className="h-px flex-1 bg-border" />
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
@@ -266,7 +309,7 @@ export default function Register() {
               value={formData.full_name}
               onChange={handleChange}
               required
-              className="bg-input border-border"
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
 
@@ -280,7 +323,7 @@ export default function Register() {
               value={formData.email}
               onChange={handleChange}
               required
-              className="bg-input border-border"
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
 
@@ -292,7 +335,7 @@ export default function Register() {
               placeholder="(00) 00000-0000"
               value={formData.phone}
               onChange={handleChange}
-              className="bg-input border-border"
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
 
@@ -309,7 +352,7 @@ export default function Register() {
                 value={formData.age}
                 onChange={(e) => handleNumericInput(e, 'age', 150)}
                 required
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
@@ -324,7 +367,7 @@ export default function Register() {
                 value={formData.height_cm}
                 onChange={(e) => handleNumericInput(e, 'height_cm', 300)}
                 required
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
@@ -339,7 +382,7 @@ export default function Register() {
                 value={formData.weight_kg}
                 onChange={handleWeightInput}
                 required
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
           </div>
@@ -356,7 +399,7 @@ export default function Register() {
                 onChange={handleChange}
                 required
                 minLength={6}
-                className="bg-input border-border pr-10"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 pr-10 text-base focus-visible:ring-offset-0"
               />
               <button
                 type="button"
@@ -378,11 +421,11 @@ export default function Register() {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
-              className="bg-input border-border"
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
 
-          <div className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
+          <div className="space-y-3 rounded-2xl border border-white/5 bg-card/70 p-4 shadow-elegant">
             <div>
               <h2 className="font-semibold">Tipo de cadastro</h2>
               <p className="text-sm text-muted-foreground">
@@ -395,7 +438,7 @@ export default function Register() {
               onValueChange={(value) => setAccountType(value as 'client' | 'personal')}
               className="gap-3"
             >
-              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 hover:bg-secondary/30">
+              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-4 transition-colors hover:bg-secondary/50">
                 <RadioGroupItem value="client" className="mt-1" />
                 <div>
                   <p className="font-medium">Sou aluno / cliente</p>
@@ -405,7 +448,7 @@ export default function Register() {
                 </div>
               </Label>
 
-              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4 hover:bg-accent/10">
+              <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10">
                 <RadioGroupItem value="personal" className="mt-1" />
                 <div>
                   <p className="font-medium">Sou personal trainer</p>
@@ -418,7 +461,7 @@ export default function Register() {
           </div>
 
           {accountType === 'client' ? (
-            <div className="space-y-3 rounded-2xl border border-border bg-card/60 p-4">
+            <div className="space-y-3 rounded-2xl border border-white/5 bg-card/70 p-4 shadow-elegant">
               <div>
                 <h2 className="font-semibold">Escolha seu plano ao criar a conta</h2>
                 <p className="text-sm text-muted-foreground">
@@ -431,7 +474,7 @@ export default function Register() {
                 onValueChange={(value) => setSelectedPlan(value as 'essential' | 'premium')}
                 className="gap-3"
               >
-                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-4 hover:bg-secondary/30">
+                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 p-4 transition-colors hover:bg-secondary/50">
                   <RadioGroupItem value="essential" className="mt-1" />
                   <div>
                     <p className="font-medium">Caderno de treinos gratuito</p>
@@ -439,7 +482,7 @@ export default function Register() {
                   </div>
                 </Label>
 
-                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4 hover:bg-accent/10">
+                <Label className="flex cursor-pointer items-start gap-3 rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10">
                   <RadioGroupItem value="premium" className="mt-1" />
                   <div>
                     <p className="font-medium">Quero ser Premium agora</p>
@@ -451,18 +494,18 @@ export default function Register() {
               </RadioGroup>
 
               {selectedPlan === 'premium' && (
-                <div className="space-y-3 rounded-xl border border-border bg-background/30 p-3">
+                <div className="space-y-3 rounded-xl border border-white/10 bg-background/30 p-3">
                   <p className="text-sm font-medium">Forma de pagamento inicial</p>
                   <RadioGroup
                     value={paymentMethod}
                     onValueChange={(value) => setPaymentMethod(value as 'pix' | 'credit_card')}
                     className="grid gap-3 sm:grid-cols-2"
                   >
-                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/30">
+                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 p-3 transition-colors hover:bg-secondary/50">
                       <RadioGroupItem value="pix" />
                       <span className="text-sm">PIX</span>
                     </Label>
-                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-border p-3 hover:bg-secondary/30">
+                    <Label className="flex cursor-pointer items-center gap-3 rounded-lg border border-white/10 p-3 transition-colors hover:bg-secondary/50">
                       <RadioGroupItem value="credit_card" />
                       <span className="text-sm">Cartão de crédito</span>
                     </Label>
@@ -471,7 +514,7 @@ export default function Register() {
               )}
             </div>
           ) : (
-            <div className="space-y-4 rounded-2xl border border-accent/30 bg-accent/5 p-4">
+            <div className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 shadow-elegant">
               <div>
                 <h2 className="font-semibold">Validação de personal trainer</h2>
                 <p className="text-sm text-muted-foreground">
@@ -488,7 +531,7 @@ export default function Register() {
                     value={formData.cref}
                     onChange={handleChange}
                     placeholder="Ex.: 123456-G"
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                   />
                 </div>
                 <div className="space-y-2">
@@ -499,7 +542,7 @@ export default function Register() {
                     value={formData.cref_state}
                     onChange={(e) => setFormData((prev) => ({ ...prev, cref_state: e.target.value.toUpperCase().slice(0, 2) }))}
                     placeholder="SP"
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -513,7 +556,7 @@ export default function Register() {
                     value={formData.specialties}
                     onChange={handleChange}
                     placeholder="Ex.: hipertrofia, emagrecimento"
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                   />
                 </div>
                 <div className="space-y-2">
@@ -526,7 +569,7 @@ export default function Register() {
                     value={formData.experience_years}
                     onChange={(e) => handleNumericInput(e, 'experience_years', 80)}
                     placeholder="5"
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                   />
                 </div>
               </div>
@@ -539,7 +582,7 @@ export default function Register() {
                   value={formData.instagram_handle}
                   onChange={handleChange}
                   placeholder="@seuusuario"
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
 
@@ -551,7 +594,7 @@ export default function Register() {
                   value={formData.proof_notes}
                   onChange={handleChange}
                   placeholder="Explique sua atuação, nicho e dados para validação"
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
 
@@ -563,7 +606,7 @@ export default function Register() {
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     onChange={(event) => setSelfPhoto(event.target.files?.[0] ?? null)}
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-sm focus-visible:ring-offset-0"
                   />
                   <p className="text-xs text-muted-foreground">Rosto visível, JPG/PNG/WebP até 5MB.</p>
                 </div>
@@ -574,7 +617,7 @@ export default function Register() {
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
                     onChange={(event) => setDocumentPhoto(event.target.files?.[0] ?? null)}
-                    className="bg-input border-border"
+                    className="h-14 rounded-xl border-white/5 bg-secondary/70 text-sm focus-visible:ring-offset-0"
                   />
                   <p className="text-xs text-muted-foreground">Documento/CREF legível, JPG/PNG/WebP até 5MB.</p>
                 </div>
@@ -582,7 +625,7 @@ export default function Register() {
             </div>
           )}
 
-          <div className="flex items-start gap-3 rounded-2xl border border-border bg-card/60 p-4">
+          <div className="flex items-start gap-3 rounded-2xl border border-white/5 bg-card/70 p-4 shadow-elegant">
             <Checkbox
               id="termsAccepted"
               checked={termsAccepted}
@@ -591,7 +634,7 @@ export default function Register() {
             />
             <Label htmlFor="termsAccepted" className="cursor-pointer text-sm leading-relaxed text-muted-foreground">
               Li e aceito os{' '}
-              <Link to="/termos-de-uso" target="_blank" className="font-medium text-accent hover:underline">
+              <Link to="/termos-de-uso" target="_blank" className="font-medium text-primary hover:underline">
                 Termos de Uso
               </Link>{' '}
               da Vitalissy.
@@ -600,7 +643,7 @@ export default function Register() {
 
           <Button
             type="submit"
-            className="w-full bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+            className="h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95"
             disabled={loading}
           >
             {loading
@@ -613,9 +656,9 @@ export default function Register() {
           </Button>
         </form>
 
-        <p className="text-center text-muted-foreground text-sm">
+        <p className="text-center text-base text-foreground">
           Já tem conta?{' '}
-          <Link to="/login" className="text-accent hover:underline font-medium">
+          <Link to="/login" className="font-semibold text-primary hover:underline">
             Entrar
           </Link>
         </p>

@@ -1,14 +1,53 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Edit, LogOut, Save, X } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import type { ElementType } from 'react';
+import {
+  ArrowLeft,
+  Bell,
+  Edit,
+  LogOut,
+  Mail,
+  MessageCircle,
+  Save,
+  ShieldCheck,
+  Smartphone,
+  Watch,
+  X,
+} from 'lucide-react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { handleIntegerKeyDown, handleDecimalKeyDown, sanitizeInteger, sanitizeDecimal } from '@/lib/inputValidation';
+
+type NotificationPreference = {
+  key: 'updates' | 'reminders' | 'account' | 'wearables' | 'email' | 'whatsapp';
+  label: string;
+  description: string;
+  icon: ElementType;
+};
+
+const notificationPreferences: NotificationPreference[] = [
+  { key: 'updates', label: 'Novidades', description: 'Conteúdos e melhorias do app', icon: Bell },
+  { key: 'reminders', label: 'Lembretes', description: 'Treinos, saúde e rotina diária', icon: Smartphone },
+  { key: 'account', label: 'Conta', description: 'Segurança, login e pagamentos', icon: ShieldCheck },
+  { key: 'wearables', label: 'Relógio', description: 'Sincronização de saúde', icon: Watch },
+  { key: 'email', label: 'Email', description: 'Resumo e avisos importantes', icon: Mail },
+  { key: 'whatsapp', label: 'WhatsApp', description: 'Confirmação de consultas', icon: MessageCircle },
+];
+
+function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-white/10 py-4 last:border-b-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="max-w-[62%] truncate text-right text-sm font-semibold text-foreground">{value || '-'}</span>
+    </div>
+  );
+}
 
 export default function Settings() {
   const { signOut } = useAuth();
@@ -19,6 +58,14 @@ export default function Settings() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [highlightBMI, setHighlightBMI] = useState(false);
+  const [notificationSettings, setNotificationSettings] = useState({
+    updates: true,
+    reminders: true,
+    account: true,
+    wearables: true,
+    email: true,
+    whatsapp: false,
+  });
   const bmiFieldsRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -102,6 +149,13 @@ export default function Settings() {
     navigate('/login');
   };
 
+  const initials = profile?.full_name
+    ?.split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'VI';
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -111,37 +165,58 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Ajustes</h1>
+    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 pb-28 pt-4 md:pb-8 md:pt-7">
+      <header className="relative flex h-12 items-center justify-center">
+        <Link
+          to="/profile"
+          className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <h1 className="text-base font-bold">Ajustes</h1>
+        {!editing && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={startEditing}
+            className="absolute right-0 h-10 w-10 rounded-full bg-card/85 shadow-elegant"
+            aria-label="Editar perfil"
+          >
+            <Edit className="h-5 w-5" />
+          </Button>
+        )}
+      </header>
 
-      {/* Profile Card */}
-      <div className="bg-card rounded-2xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-accent" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">{profile?.full_name}</h2>
-              <p className="text-sm text-muted-foreground">{profile?.email}</p>
-            </div>
+      <section className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant md:p-5">
+        <div className="flex flex-col items-center gap-3 py-2 text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full border border-primary/25 bg-primary/15 text-2xl font-bold text-primary">
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt={profile.full_name} className="h-full w-full rounded-full object-cover" />
+            ) : (
+              initials
+            )}
+          </div>
+          <div>
+            <p className="text-base font-bold">{profile?.full_name}</p>
+            <p className="text-sm text-muted-foreground">{profile?.email}</p>
           </div>
           {!editing && (
-            <Button variant="ghost" size="icon" onClick={startEditing}>
-              <Edit className="w-5 h-5" />
-            </Button>
+            <button type="button" onClick={startEditing} className="text-sm font-bold text-primary">
+              Editar dados
+            </button>
           )}
         </div>
 
         {editing ? (
-          <div className="space-y-4">
+          <div className="mt-5 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="full_name">Nome completo</Label>
               <Input
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
@@ -150,14 +225,14 @@ export default function Settings() {
                 id="phone"
                 value={formData.phone}
                 onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                className="bg-input border-border"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div 
               ref={bmiFieldsRef}
               className={cn(
                 "grid grid-cols-3 gap-3 p-2 -m-2 rounded-xl transition-all duration-500",
-                highlightBMI && "ring-2 ring-accent bg-accent/10"
+                highlightBMI && "ring-2 ring-primary bg-primary/10"
               )}
             >
               <div className="space-y-2">
@@ -170,7 +245,7 @@ export default function Settings() {
                   value={formData.age}
                   onKeyDown={handleIntegerKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, age: sanitizeInteger(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
               <div className="space-y-2">
@@ -183,7 +258,7 @@ export default function Settings() {
                   value={formData.height_cm}
                   onKeyDown={handleIntegerKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, height_cm: sanitizeInteger(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
               <div className="space-y-2">
@@ -196,7 +271,7 @@ export default function Settings() {
                   value={formData.weight_kg}
                   onKeyDown={handleDecimalKeyDown}
                   onChange={(e) => setFormData((prev) => ({ ...prev, weight_kg: sanitizeDecimal(e.target.value) }))}
-                  className="bg-input border-border"
+                  className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
                 />
               </div>
             </div>
@@ -212,7 +287,7 @@ export default function Settings() {
               </Button>
               <Button
                 onClick={handleSave}
-                className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+                className="flex-1 bg-gradient-primary text-primary-foreground shadow-glow hover:opacity-95"
                 disabled={saving}
               >
                 <Save className="w-4 h-4 mr-2" />
@@ -221,34 +296,55 @@ export default function Settings() {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.age}</p>
-              <p className="text-xs text-muted-foreground">anos</p>
-            </div>
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.height_cm}</p>
-              <p className="text-xs text-muted-foreground">cm</p>
-            </div>
-            <div className="bg-muted/50 rounded-xl p-3">
-              <p className="text-2xl font-bold text-accent">{profile?.weight_kg}</p>
-              <p className="text-xs text-muted-foreground">kg</p>
-            </div>
+          <div className="mt-4">
+            <DetailRow label="Nome completo" value={profile?.full_name} />
+            <DetailRow label="Telefone" value={profile?.phone} />
+            <DetailRow label="Idade" value={profile?.age ? `${profile.age} anos` : null} />
+            <DetailRow label="Altura" value={profile?.height_cm ? `${profile.height_cm} cm` : null} />
+            <DetailRow label="Peso" value={profile?.weight_kg ? `${profile.weight_kg} kg` : null} />
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Logout Button */}
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Notificações</h2>
+          <p className="text-sm text-muted-foreground">Controle os canais e tipos de alerta que aparecem no app.</p>
+        </div>
+        <div className="rounded-2xl border border-white/5 bg-card/85 px-4 shadow-elegant">
+          {notificationPreferences.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.key} className="flex items-center justify-between gap-4 border-b border-white/10 py-4 last:border-b-0">
+                <div className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary/80 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">{item.label}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{item.description}</span>
+                  </span>
+                </div>
+                <Switch
+                  checked={notificationSettings[item.key]}
+                  onCheckedChange={(checked) => setNotificationSettings((current) => ({ ...current, [item.key]: checked }))}
+                  aria-label={`Ativar ${item.label}`}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <Button
         variant="outline"
         onClick={handleLogout}
-        className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+        className="h-14 w-full rounded-xl border-destructive/50 text-destructive hover:bg-destructive hover:text-destructive-foreground"
       >
-        <LogOut className="w-5 h-5 mr-2" />
+        <LogOut className="mr-2 h-5 w-5" />
         Sair da conta
       </Button>
 
-      {/* App Info */}
       <div className="text-center text-sm text-muted-foreground pt-4">
         <p>Dra. Gabriela Zinhani Issy</p>
         <p>Saúde & Performance</p>

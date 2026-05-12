@@ -1,4 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, MapPin, Pill, ShieldCheck, Syringe } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -84,25 +84,69 @@ export default function NewInjectable() {
   };
 
   return (
-    <div className="p-6 pb-24 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/injectables" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-6 h-6" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold">Nova Aplicação</h1>
-          <p className="text-muted-foreground text-sm">Registre sua aplicação</p>
-        </div>
-      </div>
+    <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
+        <header className="relative flex h-12 items-center justify-center md:hidden">
+          <Link
+            to="/injectables"
+            className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+            aria-label="Voltar"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+          <h1 className="text-base font-bold">Nova aplicação</h1>
+        </header>
+
+        <header className="rounded-[2rem] border border-white/5 bg-card/90 p-6 shadow-elegant">
+          <div className="flex items-start gap-4">
+            <Link to="/injectables" className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-colors hover:text-foreground md:flex">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div className="space-y-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                <Syringe className="h-6 w-6" />
+              </div>
+              <h1 className="hidden text-4xl font-bold leading-tight tracking-normal md:block">Nova aplicação</h1>
+              <p className="text-base leading-relaxed text-muted-foreground">Registre dose, horário e local de aplicação com segurança.</p>
+            </div>
+          </div>
+        </header>
+
+        <section className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+            <Pill className="mb-3 h-5 w-5 text-primary" />
+            <p className="truncate text-sm font-semibold">{medication || 'Medicamento'}</p>
+            <p className="text-xs text-muted-foreground">Seleção atual</p>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+            <Calendar className="mb-3 h-5 w-5 text-primary" />
+            <p className="truncate text-sm font-semibold">{date || '--'}</p>
+            <p className="text-xs text-muted-foreground">Data</p>
+          </div>
+          <div className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+            <MapPin className="mb-3 h-5 w-5 text-primary" />
+            <p className="truncate text-sm font-semibold">{bodyLocations.find((item) => item.value === location)?.label || 'Local'}</p>
+            <p className="text-xs text-muted-foreground">Aplicação</p>
+          </div>
+        </section>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-card rounded-2xl p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-4 rounded-[2rem] border border-white/5 bg-card/85 p-6 shadow-elegant">
+            <div className="mb-1 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <ShieldCheck className="h-5 w-5" />
+              </span>
+              <div>
+                <h2 className="font-semibold">Dados da aplicação</h2>
+                <p className="text-sm text-muted-foreground">Campos com * são obrigatórios.</p>
+              </div>
+            </div>
+
           <div className="space-y-2">
             <Label htmlFor="medication">Medicamento *</Label>
             <Select value={selectedMedication} onValueChange={setSelectedMedication}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base">
                 <SelectValue placeholder="Selecione o medicamento" />
               </SelectTrigger>
               <SelectContent>
@@ -124,7 +168,7 @@ export default function NewInjectable() {
                 placeholder="Digite o nome do medicamento"
                 value={customMedication}
                 onChange={(e) => setCustomMedication(e.target.value)}
-                className="bg-background"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
           )}
@@ -136,29 +180,35 @@ export default function NewInjectable() {
               placeholder="Ex: 0.5ml, 100mg"
               value={dose}
               onChange={(e) => setDose(e.target.value)}
-              className="bg-background"
+              className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Data *</Label>
+              <Label htmlFor="date" className="inline-flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Data *
+              </Label>
               <Input
                 id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-background"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time">Horário *</Label>
+              <Label htmlFor="time" className="inline-flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                Horário *
+              </Label>
               <Input
                 id="time"
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="bg-background"
+                className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
           </div>
@@ -166,7 +216,7 @@ export default function NewInjectable() {
           <div className="space-y-2">
             <Label htmlFor="location">Local de Aplicação *</Label>
             <Select value={location} onValueChange={setLocation}>
-              <SelectTrigger className="bg-background">
+              <SelectTrigger className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base">
                 <SelectValue placeholder="Selecione o local" />
               </SelectTrigger>
               <SelectContent>
@@ -186,19 +236,20 @@ export default function NewInjectable() {
               placeholder="Notas adicionais (opcional)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="bg-background min-h-[100px]"
+              className="min-h-[120px] rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>
-        </div>
+          </div>
 
         <Button 
           type="submit" 
-          className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+          className="h-14 w-full rounded-2xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95"
           disabled={createMutation.isPending}
         >
           {createMutation.isPending ? 'Salvando...' : 'Salvar Aplicação'}
         </Button>
       </form>
+      </div>
     </div>
   );
 }
