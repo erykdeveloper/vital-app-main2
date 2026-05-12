@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Apple, Eye, EyeOff, Heart, ArrowLeft } from 'lucide-react';
+import { Apple, ArrowLeft, BarChart3, CheckCircle2, Eye, EyeOff, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -248,8 +248,51 @@ export default function Register() {
   };
 
   return (
-    <div className="h-screen overflow-y-auto bg-background px-6 py-8 text-foreground">
-      <div className="mx-auto w-full max-w-[430px] space-y-6 pb-12">
+    <div className="min-h-screen overflow-y-auto bg-background px-6 py-8 text-foreground lg:px-10">
+      <div className="mx-auto grid w-full max-w-[430px] gap-8 pb-12 lg:max-w-[1180px] lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+        <aside className="sticky top-8 hidden min-h-[calc(100vh-4rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-card/70 p-8 shadow-elegant lg:flex lg:flex-col lg:justify-between">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-20"
+            style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-background/75 to-background" />
+          <div className="relative space-y-8">
+            <div className="flex items-center gap-3">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-primary text-primary-foreground shadow-glow">
+                <Heart className="h-7 w-7" />
+              </span>
+              <span className="text-3xl font-bold">Vitalissy</span>
+            </div>
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/15 px-4 py-2 text-sm font-semibold text-primary">
+                <Sparkles className="h-4 w-4" />
+                Cadastro completo
+              </div>
+              <h1 className="text-5xl font-bold leading-tight tracking-normal">
+                Crie sua conta com conforto no desktop.
+              </h1>
+              <p className="text-lg leading-relaxed text-muted-foreground">
+                Preencha seus dados, escolha o tipo de acesso e siga para o plano ideal sem ficar preso ao formato mobile.
+              </p>
+            </div>
+          </div>
+          <div className="relative grid gap-3">
+            {[
+              { icon: CheckCircle2, label: 'Cadastro real via API' },
+              { icon: BarChart3, label: 'Premium conectado ao checkout' },
+              { icon: ShieldCheck, label: 'Personal com validação' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 rounded-2xl border border-white/10 bg-background/45 p-4">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                  <item.icon className="h-5 w-5" />
+                </span>
+                <span className="font-semibold">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </aside>
+
+        <div className="space-y-6 lg:rounded-[2rem] lg:border lg:border-white/5 lg:bg-card/70 lg:p-8 lg:shadow-elegant">
         <div className="grid h-14 grid-cols-[44px_1fr_44px] items-center">
           <Link
             to="/onboarding"
@@ -272,7 +315,7 @@ export default function Register() {
           </p>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <button
             type="button"
             onClick={handleSocialSignup}
@@ -300,6 +343,7 @@ export default function Register() {
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="full_name">Nome completo</Label>
             <Input
@@ -327,7 +371,7 @@ export default function Register() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 lg:col-span-2">
             <Label htmlFor="phone">Telefone</Label>
             <Input
               id="phone"
@@ -339,7 +383,7 @@ export default function Register() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-3 lg:col-span-2">
             <div className="space-y-2">
               <Label htmlFor="age">Idade</Label>
               <Input
@@ -423,6 +467,7 @@ export default function Register() {
               required
               className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
+          </div>
           </div>
 
           <div className="space-y-3 rounded-2xl border border-white/5 bg-card/70 p-4 shadow-elegant">
@@ -662,6 +707,7 @@ export default function Register() {
             Entrar
           </Link>
         </p>
+        </div>
       </div>
     </div>
   );
