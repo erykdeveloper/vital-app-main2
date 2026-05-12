@@ -167,3 +167,229 @@ html, body, #root {
     padding-top: max(env(safe-area-inset-top, 0px), 20px);
   }
 }
+
+@layer components {
+  .vital-workout-video svg * {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .vital-body-stroke,
+  .vital-equipment-stroke,
+  .vital-track-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .vital-body-stroke {
+    stroke: hsl(var(--primary));
+    stroke-width: 10;
+  }
+
+  .vital-equipment-stroke {
+    stroke: hsl(var(--foreground) / 0.58);
+    stroke-width: 7;
+  }
+
+  .vital-track-line {
+    stroke: hsl(var(--foreground) / 0.22);
+    stroke-width: 6;
+    stroke-dasharray: 24 18;
+    animation: vital-track-flow 1.8s linear infinite;
+  }
+
+  .vital-track-line-2 {
+    animation-duration: 2.3s;
+    opacity: 0.65;
+  }
+
+  .vital-run-body {
+    animation: vital-run-body 0.72s ease-in-out infinite;
+  }
+
+  .vital-run-arm-a,
+  .vital-run-leg-b {
+    animation: vital-run-limb-a 0.72s ease-in-out infinite;
+  }
+
+  .vital-run-arm-b,
+  .vital-run-leg-a {
+    animation: vital-run-limb-b 0.72s ease-in-out infinite;
+  }
+
+  .vital-bar-lift {
+    animation: vital-bar-lift 1.55s ease-in-out infinite;
+  }
+
+  .vital-press-body {
+    animation: vital-press-body 1.55s ease-in-out infinite;
+  }
+
+  .vital-squat-body {
+    animation: vital-squat-body 1.45s ease-in-out infinite;
+  }
+
+  .vital-hiit-ring {
+    fill: none;
+    stroke: hsl(var(--primary) / 0.34);
+    stroke-width: 6;
+    stroke-dasharray: 42 18;
+    animation: vital-hiit-ring 1.8s linear infinite;
+  }
+
+  .vital-hiit-ring-2 {
+    animation-duration: 1.25s;
+    animation-direction: reverse;
+    opacity: 0.7;
+  }
+
+  .vital-jump-body {
+    animation: vital-jump-body 0.9s ease-in-out infinite;
+  }
+
+  .vital-bike-wheel {
+    animation: vital-wheel-spin 1s linear infinite;
+  }
+
+  .vital-pedal {
+    animation: vital-wheel-spin 0.8s linear infinite;
+  }
+
+  .vital-bike-rider {
+    animation: vital-bike-rider 0.8s ease-in-out infinite;
+  }
+
+  .vital-pull-body {
+    animation: vital-pull-body 1.35s ease-in-out infinite;
+  }
+
+  .vital-pulse-dot {
+    fill: hsl(var(--primary) / 0.65);
+    animation: vital-pulse-dot 1.4s ease-in-out infinite;
+  }
+
+  .vital-pulse-dot-2 {
+    animation-delay: 0.45s;
+  }
+}
+
+@keyframes vital-track-flow {
+  to {
+    stroke-dashoffset: -42;
+  }
+}
+
+@keyframes vital-run-body {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vital-run-limb-a {
+  0%,
+  100% {
+    transform: rotate(-13deg);
+  }
+  50% {
+    transform: rotate(16deg);
+  }
+}
+
+@keyframes vital-run-limb-b {
+  0%,
+  100% {
+    transform: rotate(16deg);
+  }
+  50% {
+    transform: rotate(-13deg);
+  }
+}
+
+@keyframes vital-bar-lift {
+  0%,
+  100% {
+    transform: translateY(18px);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+@keyframes vital-press-body {
+  0%,
+  100% {
+    transform: translateY(6px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes vital-squat-body {
+  0%,
+  100% {
+    transform: translateY(-8px);
+  }
+  50% {
+    transform: translateY(20px) scaleX(1.04);
+  }
+}
+
+@keyframes vital-hiit-ring {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+
+@keyframes vital-jump-body {
+  0%,
+  100% {
+    transform: translateY(12px) scaleX(0.96);
+  }
+  45% {
+    transform: translateY(-18px) scaleX(1.04);
+  }
+}
+
+@keyframes vital-wheel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes vital-bike-rider {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(1deg);
+  }
+}
+
+@keyframes vital-pull-body {
+  0%,
+  100% {
+    transform: translateY(24px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes vital-pulse-dot {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+}
