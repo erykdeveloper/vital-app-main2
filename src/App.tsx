@@ -21,6 +21,7 @@ const Workouts = lazy(() => import("@/pages/Workouts"));
 const WorkoutForm = lazy(() => import("@/pages/workouts/WorkoutForm"));
 const WorkoutHistory = lazy(() => import("@/pages/workouts/WorkoutHistory"));
 const WorkoutDashboard = lazy(() => import("@/pages/workouts/WorkoutDashboard"));
+const PopularWorkouts = lazy(() => import("@/pages/workouts/PopularWorkouts"));
 const CardioRunning = lazy(() => import("@/pages/workouts/CardioRunning"));
 const CardioCycling = lazy(() => import("@/pages/workouts/CardioCycling"));
 const CardioOther = lazy(() => import("@/pages/workouts/CardioOther"));
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: lazyElement(Home) },
       { path: "workouts", element: lazyElement(Workouts) },
+      { path: "workouts/popular", element: lazyElement(PopularWorkouts) },
       { path: "workouts/musculacao/:type", element: lazyElement(WorkoutForm) },
       { path: "workouts/cardio/corrida", element: lazyElement(CardioRunning) },
       { path: "workouts/cardio/ciclismo", element: lazyElement(CardioCycling) },

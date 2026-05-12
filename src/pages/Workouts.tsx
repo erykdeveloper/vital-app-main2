@@ -11,6 +11,7 @@ import {
   Home,
   MoreHorizontal,
   PersonStanding,
+  PlayCircle,
   Search,
   Sparkles,
   Zap,
@@ -34,7 +35,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Dumbbell,
     label: 'Academia',
     description: 'Força, máquinas e pesos livres.',
-    count: '24 programas',
+    count: 'Preencher treino',
     imagePosition: 'left top',
     tint: 'bg-primary/12',
   },
@@ -43,7 +44,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Footprints,
     label: 'Corrida',
     description: 'Ritmo, distância e gasto calórico.',
-    count: '20 treinos',
+    count: 'Preencher treino',
     imagePosition: 'center top',
     tint: 'bg-[#ffefc8]/12',
   },
@@ -52,7 +53,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Home,
     label: 'Em casa',
     description: 'Sessões rápidas sem sair da rotina.',
-    count: '18 treinos',
+    count: 'Preencher treino',
     imagePosition: 'right top',
     tint: 'bg-emerald-300/10',
   },
@@ -61,7 +62,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Flame,
     label: 'CrossFit',
     description: 'Intensidade, potência e resistência.',
-    count: '16 treinos',
+    count: 'Preencher treino',
     imagePosition: 'left center',
     tint: 'bg-rose-300/10',
   },
@@ -70,7 +71,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: PersonStanding,
     label: 'Calistenia',
     description: 'Controle corporal e progressão.',
-    count: '15 treinos',
+    count: 'Preencher treino',
     imagePosition: 'center center',
     tint: 'bg-sky-300/10',
   },
@@ -79,7 +80,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Zap,
     label: 'HIIT',
     description: 'Intervalos intensos e objetivos.',
-    count: '24 treinos',
+    count: 'Preencher treino',
     imagePosition: 'right center',
     tint: 'bg-primary/10',
   },
@@ -88,7 +89,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: Bike,
     label: 'Ciclismo',
     description: 'Resistência com baixo impacto.',
-    count: '12 treinos',
+    count: 'Preencher treino',
     imagePosition: 'left bottom',
     tint: 'bg-teal-300/10',
   },
@@ -97,7 +98,7 @@ const workoutCategories: WorkoutCategory[] = [
     icon: MoreHorizontal,
     label: 'Outras',
     description: 'Registre qualquer cardio.',
-    count: 'livre',
+    count: 'Preencher treino',
     imagePosition: 'right bottom',
     tint: 'bg-white/5',
   },
@@ -162,7 +163,7 @@ export default function Workouts() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-center text-lg font-bold">Categorias</h1>
+          <h1 className="text-center text-lg font-bold">Caderno</h1>
         </header>
 
         <section className="hidden rounded-[2rem] border border-white/5 bg-card/90 p-6 shadow-elegant md:block">
@@ -179,23 +180,54 @@ export default function Workouts() {
                 <Sparkles className="h-4 w-4" />
                 Caderno de treinos
               </div>
-              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Categorias</h1>
+              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Caderno</h1>
               <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
-                Escolha o tipo de treino, registre sua sessão e mantenha a evolução organizada.
+                Escolha o tipo de treino para preencher o que você fez e manter sua evolução organizada.
               </p>
             </div>
             <div className="grid min-w-[340px] grid-cols-2 gap-3">
+              <Link to="/workouts/popular" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
+                <PlayCircle className="mb-4 h-6 w-6 text-primary" />
+                <span className="block font-semibold">Treinos populares</span>
+                <span className="text-sm text-muted-foreground">Vídeos e exemplos</span>
+              </Link>
               <Link to="/workouts/history" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
                 <History className="mb-4 h-6 w-6 text-primary" />
                 <span className="block font-semibold">Histórico</span>
                 <span className="text-sm text-muted-foreground">Treinos salvos</span>
               </Link>
-              <Link to="/workouts/dashboard" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
-                <BarChart3 className="mb-4 h-6 w-6 text-primary" />
-                <span className="block font-semibold">Premium</span>
-                <span className="text-sm text-muted-foreground">Estatísticas</span>
-              </Link>
             </div>
+          </div>
+        </section>
+
+        <section className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+          <Link
+            to="/workouts/popular"
+            className="group relative isolate min-h-[150px] overflow-hidden rounded-[2rem] border border-primary/20 bg-primary/10 p-5 shadow-elegant"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-center opacity-35 transition-transform duration-300 group-hover:scale-105"
+              style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/75 to-background/20" />
+            <div className="relative flex h-full flex-col justify-between gap-5">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
+                <PlayCircle className="h-6 w-6" />
+              </span>
+              <span>
+                <span className="block text-xl font-bold">Treinos populares</span>
+                <span className="mt-1 block max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  Veja vídeos, exemplos de séries e ideias para corrida, academia, HIIT, bike e treino em casa.
+                </span>
+              </span>
+            </div>
+          </Link>
+
+          <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+            <p className="text-sm font-semibold text-primary">Como usar</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Treinos populares servem como inspiração. Caderno é onde o usuário registra o treino real que executou.
+            </p>
           </div>
         </section>
 
@@ -270,7 +302,7 @@ export default function Workouts() {
 
           <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground shadow-elegant">
             <Crown className="h-5 w-5 shrink-0 text-primary" />
-            <span>Caderno gratuito. Estatísticas avançadas no Premium.</span>
+              <span>Caderno gratuito para registrar seus treinos. Estatísticas avançadas no Premium.</span>
           </div>
         </section>
       </div>

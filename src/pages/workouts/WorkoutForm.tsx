@@ -1,5 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Plus, Dumbbell, Clock, Flame, Home, PersonStanding, RotateCcw, History } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarCheck,
+  CheckCircle2,
+  Clock,
+  Dumbbell,
+  Flame,
+  History,
+  Home,
+  ListChecks,
+  PersonStanding,
+  RotateCcw,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -517,73 +529,159 @@ export default function WorkoutForm() {
     return `${mins}:${String(secs).padStart(2, "0")}`;
   };
 
+  const totalSets = addedExercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+  const totalMinutesPreview =
+    (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
+  const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${addedExercises.length} exercícios)`;
+
   return (
-    <div className="p-4 pb-24 space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Link to="/workouts" className="text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="w-6 h-6" />
+    <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
+      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-4 pb-36 pt-4 md:px-7 md:pb-8 md:pt-7">
+      <header className="relative flex h-12 items-center justify-center md:hidden">
+        <Link
+          to="/workouts"
+          className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+          aria-label="Voltar"
+        >
+          <ArrowLeft className="h-5 w-5" />
         </Link>
+        <h1 className="text-base font-bold">{config.label}</h1>
+        <button
+          type="button"
+          onClick={() => setShowPreviousWorkouts(true)}
+          className="absolute right-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
+          aria-label="Treinos anteriores"
+        >
+          <History className="h-5 w-5" />
+        </button>
+      </header>
+
+      <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-card/90 shadow-elegant">
+        <div className="relative min-h-[220px] p-6 md:min-h-[260px] md:p-7">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-35"
+            style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-background/40 via-background/78 to-background" />
+          <div className="relative flex h-full flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl space-y-4">
+              <Link
+                to="/workouts"
+                className="hidden h-11 w-11 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-colors hover:text-foreground md:inline-flex"
+                aria-label="Voltar"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                <CalendarCheck className="h-4 w-4" />
+                {getDayOfWeek(today)}, {formatDate(today)}
+              </div>
+              <div>
+                <h1 className="hidden text-4xl font-bold leading-tight tracking-normal md:block md:text-5xl">
+                  {config.label}
+                </h1>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-lg">
+                  Monte o treino do dia, repita treinos anteriores e salve seu progresso em poucos passos.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 md:w-[360px]">
+              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
+                <ListChecks className="mb-2 h-5 w-5 text-primary" />
+                <p className="text-2xl font-bold">{addedExercises.length}</p>
+                <p className="text-xs text-muted-foreground">exercícios</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
+                <Dumbbell className="mb-2 h-5 w-5 text-primary" />
+                <p className="text-2xl font-bold">{totalSets}</p>
+                <p className="text-xs text-muted-foreground">séries</p>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
+                <Clock className="mb-2 h-5 w-5 text-primary" />
+                <p className="text-2xl font-bold">{Math.round(totalMinutesPreview) || "--"}</p>
+                <p className="text-xs text-muted-foreground">min</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex gap-3 overflow-x-auto pb-1">
+        {[
+          { label: "Hoje", active: true },
+          { label: hasUnsavedChanges ? "Rascunho salvo" : "Sem rascunho", active: hasUnsavedChanges },
+          { label: `${addedExercises.length} exercícios`, active: addedExercises.length > 0 },
+        ].map((chip) => (
+          <span
+            key={chip.label}
+            className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-semibold ${
+              chip.active
+                ? "border-primary/35 bg-primary/15 text-primary"
+                : "border-white/5 bg-card/70 text-muted-foreground"
+            }`}
+          >
+            {chip.label}
+          </span>
+        ))}
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="space-y-6">
+      {/* Workout Form */}
+      <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
-            <IconComponent className="w-5 h-5 text-accent" />
+          <div className="w-11 h-11 bg-primary/15 rounded-2xl flex items-center justify-center">
+            <IconComponent className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">{config.label}</h1>
-            <p className="text-muted-foreground text-sm">
-              {getDayOfWeek(today)}, {formatDate(today)}
-            </p>
+            <Label className="text-lg font-semibold">Treino do dia</Label>
+            <p className="text-sm text-muted-foreground">Dê um nome para organizar o histórico.</p>
           </div>
-        </div>
-      </div>
-
-      {/* Workout Form */}
-      <div className="bg-card rounded-xl p-4 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center">
-            <IconComponent className="w-5 h-5 text-accent" />
-          </div>
-          <Label className="text-lg font-semibold">Treino do dia</Label>
         </div>
         <Input
-          placeholder="Peito/Tríceps…"
+          placeholder="Peito/Tríceps, Full body, Lower..."
           value={objective}
           onChange={(e) => setObjective(e.target.value)}
-          className="bg-background border-border"
+          className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
         />
 
         {/* Botões de Repetir Treino */}
-        <div className="flex gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
           <Button
             type="button"
             variant="outline"
             onClick={handleRepeatLastWorkout}
             disabled={loadingLastWorkout}
-            className="flex-1"
+            className="h-12 rounded-xl border-white/10 bg-background/30"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
-            {loadingLastWorkout ? "Buscando..." : "Repetir Último"}
+            {loadingLastWorkout ? "Buscando..." : "Repetir último"}
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={() => setShowPreviousWorkouts(true)}
-            className="flex-1"
+            className="h-12 rounded-xl border-white/10 bg-background/30"
           >
             <History className="w-4 h-4 mr-2" />
-            Ver Anteriores
+            Ver anteriores
           </Button>
         </div>
 
-        <div className="border-t border-border" />
+        <div className="border-t border-white/10" />
 
         {/* Lista de Exercícios Adicionados */}
         {addedExercises.length > 0 && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium text-muted-foreground">
-                Exercícios Adicionados ({addedExercises.length})
+                Exercícios adicionados ({addedExercises.length})
               </Label>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {totalSets} séries
+              </span>
             </div>
             <div className="space-y-2">
               {addedExercises.map((exercise, index) => (
@@ -596,30 +694,34 @@ export default function WorkoutForm() {
                 />
               ))}
             </div>
-            <div className="border-t border-border" />
+            <div className="border-t border-white/10" />
           </div>
         )}
 
         {/* Formulário para Novo Exercício */}
-        <ExerciseInputForm
-          currentExercise={currentExercise}
-          onExerciseChange={setCurrentExercise}
-          onAddExercise={handleAddCurrentExercise}
-          onCancelEdit={handleCancelEdit}
-          isEditing={editingIndex !== null}
-        />
+        <div className="rounded-2xl bg-secondary/35 p-3">
+          <ExerciseInputForm
+            currentExercise={currentExercise}
+            onExerciseChange={setCurrentExercise}
+            onAddExercise={handleAddCurrentExercise}
+            onCancelEdit={handleCancelEdit}
+            isEditing={editingIndex !== null}
+          />
+        </div>
 
         {/* Rest Timer Settings */}
-        <div className="pt-2 border-t border-border/50">
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">Definir descanso:</span>
+        <div className="rounded-2xl border border-white/5 bg-background/30 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium">Descanso entre séries</span>
+            </div>
             <Select
               value={restTime.toString()}
               onValueChange={(value) => setRestTime(Number(value))}
               disabled={isResting}
             >
-              <SelectTrigger className="w-[70px] h-7 bg-background text-xs">
+              <SelectTrigger className="h-10 w-[92px] rounded-xl border-white/10 bg-secondary/70 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -634,10 +736,15 @@ export default function WorkoutForm() {
           </div>
         </div>
       </div>
+        </div>
 
+        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
       {/* Workout Summary */}
-      <div className="bg-card rounded-xl p-4 space-y-4">
-        <h2 className="text-lg font-semibold">Resumo do Treino</h2>
+      <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold">Resumo do treino</h2>
+          <p className="text-sm text-muted-foreground">Complete antes de salvar no histórico.</p>
+        </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
@@ -654,7 +761,7 @@ export default function WorkoutForm() {
                   maxLength={2}
                   value={durationHours === "" ? "" : durationHours}
                   onChange={(e) => handleDurationInput(e.target.value, 23, setDurationHours)}
-                  className="bg-background border-border pr-6"
+                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-6 text-center focus-visible:ring-offset-0"
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">h</span>
               </div>
@@ -666,7 +773,7 @@ export default function WorkoutForm() {
                   maxLength={2}
                   value={durationMin === "" ? "" : durationMin}
                   onChange={(e) => handleDurationInput(e.target.value, 59, setDurationMin)}
-                  className="bg-background border-border pr-7"
+                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-7 text-center focus-visible:ring-offset-0"
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
               </div>
@@ -678,7 +785,7 @@ export default function WorkoutForm() {
                   maxLength={2}
                   value={durationSec === "" ? "" : durationSec}
                   onChange={(e) => handleDurationInput(e.target.value, 59, setDurationSec)}
-                  className="bg-background border-border pr-6"
+                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-6 text-center focus-visible:ring-offset-0"
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">s</span>
               </div>
@@ -700,19 +807,44 @@ export default function WorkoutForm() {
                 const value = e.target.value.replace(/[^0-9]/g, '');
                 setCalories(value ? Number(value) : "");
               }}
-              className="bg-background border-border"
+              className="h-12 rounded-xl border-white/5 bg-secondary/70 focus-visible:ring-offset-0"
             />
           </div>
         </div>
+
+        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-secondary/45 p-3 text-center">
+          <div>
+            <p className="text-lg font-bold text-primary">{addedExercises.length}</p>
+            <p className="text-[11px] text-muted-foreground">exerc.</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-primary">{totalSets}</p>
+            <p className="text-[11px] text-muted-foreground">séries</p>
+          </div>
+          <div>
+            <p className="text-lg font-bold text-primary">{calories || "--"}</p>
+            <p className="text-[11px] text-muted-foreground">kcal</p>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSaveWorkout}
+          disabled={saving || addedExercises.length === 0}
+          className="hidden h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:inline-flex"
+        >
+          {saveButtonLabel}
+        </Button>
+      </div>
+        </aside>
       </div>
 
       {/* Save Button */}
       <Button
         onClick={handleSaveWorkout}
         disabled={saving || addedExercises.length === 0}
-        className="w-full bg-accent text-accent-foreground hover:bg-accent/90 py-6 text-lg font-semibold"
+        className="fixed inset-x-4 bottom-24 z-40 h-14 rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:hidden"
       >
-        {saving ? "Salvando..." : `Salvar Treino (${addedExercises.length} exercícios)`}
+        {saveButtonLabel}
       </Button>
 
       {/* Floating Timer Button - Always visible */}
@@ -724,7 +856,7 @@ export default function WorkoutForm() {
             }
             setShowTimerOverlay(true);
           }}
-          className={`fixed bottom-24 right-4 z-50 w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 ${
+          className={`fixed bottom-44 right-4 z-50 w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 lg:bottom-6 ${
             isResting ? "bg-accent animate-pulse" : "bg-card border-2 border-accent hover:scale-110"
           }`}
         >
@@ -822,6 +954,7 @@ export default function WorkoutForm() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      </div>
     </div>
   );
 }

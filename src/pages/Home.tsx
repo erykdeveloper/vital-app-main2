@@ -10,6 +10,7 @@ import {
   Flame,
   Footprints,
   Heart,
+  PlayCircle,
   Search,
   Sparkles,
   Target,
@@ -389,6 +390,7 @@ const searchItems = [
   { label: "Perfil", description: "Dados pessoais e avatar", to: "/profile", icon: UserCircle2 },
   { label: "Configurações", description: "Editar cadastro e medidas", to: "/settings", icon: UserCircle2 },
   { label: "Treinos", description: "Registrar uma nova atividade", to: "/workouts", icon: Zap },
+  { label: "Treinos populares", description: "Vídeos e exemplos de treinos", to: "/workouts/popular", icon: PlayCircle },
   { label: "Histórico de treinos", description: "Ver treinos registrados", to: "/workouts/history", icon: BarChart3 },
   { label: "Estatísticas Premium", description: "Relatórios pagos e evolução", to: "/workouts/dashboard", icon: BarChart3 },
   { label: "Relógio", description: "Conectar wearable e gerar ficha vital", to: "/wearables", icon: Watch },
@@ -587,7 +589,7 @@ export default function Home() {
       label: "Cardio",
       title: "Corrida",
       description: "Treino intervalado para elevar o ritmo e ganhar folego.",
-      to: "/workouts/cardio/corrida",
+      to: "/workouts/popular?categoria=corrida",
       className: "bg-[#151515]",
       imagePosition: "left top",
     },
@@ -595,7 +597,7 @@ export default function Home() {
       label: "Musculação",
       title: "Academia",
       description: "Sessão focada em força, volume e constância semanal.",
-      to: "/workouts/musculacao/academia",
+      to: "/workouts/popular?categoria=academia",
       className: "bg-[#151515]",
       imagePosition: "right top",
     },
@@ -603,7 +605,7 @@ export default function Home() {
       label: "Flexibilidade",
       title: "Mobilidade",
       description: "Abra espaço para recuperação ativa e movimento com controle.",
-      to: "/workouts/cardio/outras",
+      to: "/workouts/popular?categoria=casa",
       className: "bg-[#151515]",
       imagePosition: "left bottom",
     },
@@ -611,7 +613,7 @@ export default function Home() {
       label: "Bike",
       title: "Ciclismo",
       description: "Cardio controlado para resistência e gasto calórico sem impacto.",
-      to: "/workouts/cardio/ciclismo",
+      to: "/workouts/popular?categoria=bike",
       className: "bg-[#151515]",
       imagePosition: "right bottom",
     },
@@ -724,7 +726,7 @@ export default function Home() {
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold md:text-2xl">Treinos populares</h2>
-            <Link to="/workouts" className="text-sm font-semibold text-primary md:text-base">
+            <Link to="/workouts/popular" className="text-sm font-semibold text-primary md:text-base">
               Ver todos
             </Link>
           </div>
