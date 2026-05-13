@@ -33,7 +33,10 @@ function getWorkoutXHeaders() {
 }
 
 function normalizeExercise(data: unknown): WorkoutXExercise | null {
-  const firstExercise = Array.isArray(data) ? data[0] : data;
+  const responseData = data && typeof data === "object" && "data" in data
+    ? (data as { data?: unknown }).data
+    : data;
+  const firstExercise = Array.isArray(responseData) ? responseData[0] : responseData;
   const parsed = exerciseSchema.safeParse(firstExercise);
 
   if (!parsed.success) return null;
