@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { Router } from "express";
 import { z } from "zod";
 import { env } from "../config/env.js";
@@ -26,6 +27,20 @@ type WorkoutXExercise = z.infer<typeof exerciseSchema> & {
   proxyGifUrl: string;
 };
 
+function signGifId(id: string) {
+  return crypto
+    .createHmac("sha256", env.JWT_SECRET)
+    .update(id)
+    .digest("base64url")
+    .slice(0, 32);
+}
+
+function timingSafeEqual(a: string, b: string) {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+  return left.length === right.length && crypto.timingSafeEqual(left, right);
+}
+
 function getWorkoutXHeaders() {
   return {
     "X-WorkoutX-Key": env.WORKOUTX_API_KEY ?? "",
@@ -43,7 +58,7 @@ function normalizeExercise(data: unknown): WorkoutXExercise | null {
 
   return {
     ...parsed.data,
-    proxyGifUrl: `/api/workoutx/gifs/${encodeURIComponent(parsed.data.id)}`,
+    proxyGifUrl: `/api/workoutx/gifs/${encodeURIComponent(parsed.data.id)}?sig=${signGifId(parsed.data.id)}`,
   };
 }
 
@@ -106,6 +121,11 @@ router.get(
     const id = getRouteParam(req.params.id, "id");
     if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
       return res.status(400).json({ message: "ID invalido" });
+    }
+
+    const signature = typeof req.query.sig === "string" ? req.query.sig : "";
+    if (!signature || !timingSafeEqual(signature, signGifId(id))) {
+      return res.status(403).json({ message: "Assinatura invalida" });
     }
 
     const response = await fetch(`${WORKOUTX_BASE_URL}/gifs/${encodeURIComponent(id)}`, {
