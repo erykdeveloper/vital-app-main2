@@ -29,6 +29,7 @@ const envSchema = z.object({
   GARMIN_CLIENT_SECRET: z.string().optional(),
   APPLE_HEALTH_TEAM_ID: z.string().optional(),
   APPLE_HEALTH_KEY_ID: z.string().optional(),
+  WORKOUTX_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

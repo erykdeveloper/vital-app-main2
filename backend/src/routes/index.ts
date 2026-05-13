@@ -12,6 +12,7 @@ import { reportsRouter } from "./reports.routes.js";
 import { trainerRouter } from "./trainer.routes.js";
 import { wearablesRouter } from "./wearables.routes.js";
 import { workoutsRouter } from "./workouts.routes.js";
+import { workoutxRouter } from "./workoutx.routes.js";
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use("/body-progress", bodyProgressRouter);
 router.use("/reports", reportsRouter);
 router.use("/trainer", trainerRouter);
 router.use("/wearables", wearablesRouter);
+router.use("/workoutx", workoutxRouter);
 router.use("/admin", adminRouter);
 
 export { router as apiRouter };

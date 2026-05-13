@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -15,8 +15,35 @@ import {
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { WorkoutAnimation, type WorkoutAnimationVariant } from "@/components/workouts/WorkoutAnimation";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+interface ExerciseMedia {
+  label: string;
+  src: string;
+  credit: string;
+  sourceUrl: string;
+  license: string;
+  workoutxQuery: string;
+}
+
+interface WorkoutXExercise {
+  id: string;
+  name: string;
+  proxyGifUrl: string;
+  bodyPart?: string;
+  target?: string;
+  equipment?: string;
+  category?: string;
+  difficulty?: string;
+  description?: string;
+  instructions?: string[];
+}
+
+interface WorkoutXMediaResponse {
+  configured: boolean;
+  exercises: Record<string, WorkoutXExercise | null>;
+}
 
 interface PopularWorkout {
   id: string;
@@ -28,10 +55,101 @@ interface PopularWorkout {
   duration: string;
   calories: string;
   summary: string;
-  animation: WorkoutAnimationVariant;
+  hero: ExerciseMedia;
   logTo: string;
-  steps: string[];
+  steps: ExerciseMedia[];
 }
+
+const media = {
+  running: {
+    label: "Corrida",
+    src: "/exercises/running.gif",
+    credit: "Eadweard Muybridge",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Descriptive_Zoopraxography_Athletes_Running_Animated_12.gif",
+    license: "Domínio público",
+    workoutxQuery: "run",
+  },
+  squat: {
+    label: "Agachamento",
+    src: "/exercises/squats.gif",
+    credit: "Wensceslao",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Squats.gif",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "squat",
+  },
+  bench: {
+    label: "Supino na máquina Smith",
+    src: "/exercises/smith-machine-bench-press.gif",
+    credit: "Mohamed Ouda",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:SmithMachineBenchPress.gif",
+    license: "CC BY-SA 3.0",
+    workoutxQuery: "bench press",
+  },
+  pushup: {
+    label: "Flexão",
+    src: "/exercises/pushups.gif",
+    credit: "Wensceslao",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Pushups.gif",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "push up",
+  },
+  plank: {
+    label: "Prancha",
+    src: "/exercises/plank.svg",
+    credit: "Pk0001",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Plank_exercise.svg",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "plank",
+  },
+  jumpingJacks: {
+    label: "Polichinelo",
+    src: "/exercises/jumpingjacks.gif",
+    credit: "Wensceslao",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Jumpingjacks.gif",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "jumping jack",
+  },
+  skierJacks: {
+    label: "Skier jacks",
+    src: "/exercises/skierjacks.gif",
+    credit: "Wensceslao",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Skierjacks.gif",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "skier",
+  },
+  crunch: {
+    label: "Abdominal",
+    src: "/exercises/crunch.gif",
+    credit: "Zimmermanns",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Sit-ups_or_Crunch.gif",
+    license: "CC BY 3.0",
+    workoutxQuery: "crunch",
+  },
+  pullup: {
+    label: "Barra fixa",
+    src: "/exercises/pullup.gif",
+    credit: "Extremistpullup",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Pullup.gif",
+    license: "CC BY-SA",
+    workoutxQuery: "pull up",
+  },
+  bike: {
+    label: "Bike ergométrica",
+    src: "/exercises/exercise-bike.gif",
+    credit: "Videoplasty.com",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Man_on_an_Exercise_Bike_GIF_Animation_Loop.gif",
+    license: "CC BY-SA 4.0",
+    workoutxQuery: "stationary bike",
+  },
+  lunge: {
+    label: "Afundo",
+    src: "/exercises/lunge.gif",
+    credit: "CDC",
+    sourceUrl: "https://commons.wikimedia.org/wiki/File:Lunge-CDC_strength_training_for_older_adults.gif",
+    license: "Domínio público",
+    workoutxQuery: "lunge",
+  },
+} satisfies Record<string, ExerciseMedia>;
 
 const filters = [
   { value: "todos", label: "Todos" },
@@ -53,9 +171,13 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "24 min",
     calories: "180 kcal",
     summary: "Alterna caminhada e corrida para melhorar ritmo sem exagerar na carga.",
-    animation: "running",
+    hero: media.running,
     logTo: "/workouts/cardio/corrida",
-    steps: ["5 min caminhada rápida", "8x 1 min corrida + 90s caminhada", "4 min desaquecimento"],
+    steps: [
+      { ...media.running, label: "5 min caminhada rápida" },
+      { ...media.running, label: "8x 1 min corrida + 90s caminhada" },
+      { ...media.running, label: "4 min desaquecimento" },
+    ],
   },
   {
     id: "academia-full-body",
@@ -67,9 +189,14 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "45 min",
     calories: "260 kcal",
     summary: "Base completa com movimentos grandes para peito, costas, pernas e core.",
-    animation: "strength",
+    hero: media.bench,
     logTo: "/workouts/musculacao/academia",
-    steps: ["Agachamento 3x10", "Supino 3x10", "Remada 3x12", "Prancha 3x30s"],
+    steps: [
+      { ...media.squat, label: "Agachamento 3x10" },
+      { ...media.bench, label: "Supino 3x10" },
+      { ...media.pullup, label: "Puxada/barra 3x8" },
+      { ...media.plank, label: "Prancha 3x30s" },
+    ],
   },
   {
     id: "casa-sem-equipamento",
@@ -81,9 +208,14 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "28 min",
     calories: "170 kcal",
     summary: "Sequência simples para manter constância usando apenas peso corporal.",
-    animation: "home",
+    hero: media.pushup,
     logTo: "/workouts/musculacao/em-casa",
-    steps: ["Polichinelo 3x40s", "Agachamento 3x15", "Flexão adaptada 3x8", "Abdominal 3x15"],
+    steps: [
+      { ...media.jumpingJacks, label: "Polichinelo 3x40s" },
+      { ...media.squat, label: "Agachamento 3x15" },
+      { ...media.pushup, label: "Flexão adaptada 3x8" },
+      { ...media.crunch, label: "Abdominal 3x15" },
+    ],
   },
   {
     id: "hiit-baixo-impacto",
@@ -95,9 +227,14 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "18 min",
     calories: "210 kcal",
     summary: "Blocos curtos para elevar frequência cardíaca preservando articulações.",
-    animation: "hiit",
+    hero: media.jumpingJacks,
     logTo: "/workouts/cardio/hiit",
-    steps: ["30s marcha forte", "30s agachamento", "30s socos alternados", "30s descanso por 4 rounds"],
+    steps: [
+      { ...media.jumpingJacks, label: "30s polichinelo" },
+      { ...media.squat, label: "30s agachamento" },
+      { ...media.skierJacks, label: "30s skier jacks" },
+      { ...media.plank, label: "30s prancha ou descanso ativo" },
+    ],
   },
   {
     id: "bike-resistencia",
@@ -109,9 +246,14 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "35 min",
     calories: "240 kcal",
     summary: "Pedalada contínua com variação de carga para ganhar resistência.",
-    animation: "bike",
+    hero: media.bike,
     logTo: "/workouts/cardio/ciclismo",
-    steps: ["7 min aquecimento", "20 min ritmo moderado", "5 min carga alta", "3 min leve"],
+    steps: [
+      { ...media.bike, label: "7 min aquecimento" },
+      { ...media.bike, label: "20 min ritmo moderado" },
+      { ...media.bike, label: "5 min carga alta" },
+      { ...media.bike, label: "3 min leve" },
+    ],
   },
   {
     id: "calistenia-base",
@@ -123,23 +265,72 @@ const popularWorkouts: PopularWorkout[] = [
     duration: "32 min",
     calories: "190 kcal",
     summary: "Exemplo focado em domínio corporal, postura e progressão segura.",
-    animation: "calisthenics",
+    hero: media.pullup,
     logTo: "/workouts/musculacao/calistenia",
-    steps: ["Mobilidade 5 min", "Flexão 4x6", "Remada australiana 4x8", "Prancha lateral 3x25s"],
+    steps: [
+      { ...media.lunge, label: "Mobilidade com afundo 5 min" },
+      { ...media.pushup, label: "Flexão 4x6" },
+      { ...media.pullup, label: "Barra/puxada 4x8" },
+      { ...media.plank, label: "Prancha lateral 3x25s" },
+    ],
   },
 ];
 
-function PopularWorkoutCard({ workout }: { workout: PopularWorkout }) {
+function getWorkoutXQueries(workouts: PopularWorkout[]) {
+  return Array.from(
+    new Set(
+      workouts
+        .flatMap((workout) => [workout.hero, ...workout.steps])
+        .map((item) => item.workoutxQuery)
+        .filter(Boolean),
+    ),
+  );
+}
+
+function resolveExerciseMedia(item: ExerciseMedia, workoutxMedia: Record<string, WorkoutXExercise | null>): ExerciseMedia {
+  const workoutxExercise = workoutxMedia[item.workoutxQuery];
+  if (!workoutxExercise?.proxyGifUrl) return item;
+
+  return {
+    ...item,
+    src: workoutxExercise.proxyGifUrl,
+    credit: "WorkoutX",
+    sourceUrl: "https://workoutxapp.com/",
+    license: `via WorkoutX API (${workoutxExercise.name})`,
+  };
+}
+
+function PopularWorkoutCard({
+  workout,
+  workoutxMedia,
+  workoutxConfigured,
+}: {
+  workout: PopularWorkout;
+  workoutxMedia: Record<string, WorkoutXExercise | null>;
+  workoutxConfigured: boolean;
+}) {
   const Icon = workout.icon;
+  const hero = resolveExerciseMedia(workout.hero, workoutxMedia);
+  const steps = workout.steps.map((step) => resolveExerciseMedia(step, workoutxMedia));
+  const usesWorkoutX = [hero, ...steps].some((item) => item.credit === "WorkoutX");
 
   return (
     <article className="overflow-hidden rounded-[2rem] border border-white/5 bg-card/85 shadow-elegant">
-      <div className="p-3">
-        <WorkoutAnimation
-          variant={workout.animation}
-          title={workout.title}
-          label={workout.label}
-        />
+      <div className="relative p-3">
+        <div className="relative min-h-[230px] overflow-hidden rounded-[1.5rem] bg-background">
+          <img
+            src={hero.src}
+            alt={`Demonstração animada de ${hero.label}`}
+            className="h-[230px] w-full object-contain"
+            loading="lazy"
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+            <span className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-bold text-primary-foreground shadow-glow">
+              <Icon className="h-3.5 w-3.5" />
+              {workout.label}
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4 p-5">
@@ -150,6 +341,9 @@ function PopularWorkoutCard({ workout }: { workout: PopularWorkout }) {
           <div>
             <h2 className="text-2xl font-bold">{workout.title}</h2>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">{workout.summary}</p>
+            <p className="mt-2 text-xs font-medium text-primary">
+              {usesWorkoutX ? "Animações carregadas via WorkoutX" : workoutxConfigured ? "Fallback local aplicado" : "Fallback local: configure a chave WorkoutX no backend"}
+            </p>
           </div>
         </div>
 
@@ -172,13 +366,38 @@ function PopularWorkoutCard({ workout }: { workout: PopularWorkout }) {
         </div>
 
         <div className="space-y-2">
-          {workout.steps.map((step) => (
-            <div key={step} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-              <span>{step}</span>
+          {steps.map((step) => (
+            <div key={step.label} className="flex items-center gap-3 rounded-2xl bg-secondary/35 p-2 text-sm text-muted-foreground">
+              <img
+                src={step.src}
+                alt={`Demonstração de ${step.label}`}
+                className="h-16 w-20 shrink-0 rounded-xl bg-background object-contain"
+                loading="lazy"
+              />
+              <span className="flex min-w-0 items-start gap-2">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>{step.label}</span>
+              </span>
             </div>
           ))}
         </div>
+
+        <details className="rounded-2xl border border-white/5 bg-background/25 px-4 py-3 text-xs text-muted-foreground">
+          <summary className="cursor-pointer font-medium text-foreground">Créditos das animações</summary>
+          <div className="mt-3 space-y-2">
+            {Array.from(new Map([hero, ...steps].map((item) => [item.src, item])).values()).map((item) => (
+              <a
+                key={item.src}
+                href={item.sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block underline-offset-4 hover:text-primary hover:underline"
+              >
+                {item.label}: {item.credit} ({item.license})
+              </a>
+            ))}
+          </div>
+        </details>
 
         <div className="grid gap-2">
           <Button asChild className="h-12 rounded-xl bg-gradient-primary font-bold text-primary-foreground shadow-glow">
@@ -192,12 +411,40 @@ function PopularWorkoutCard({ workout }: { workout: PopularWorkout }) {
 
 export default function PopularWorkouts() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [workoutxMedia, setWorkoutxMedia] = useState<Record<string, WorkoutXExercise | null>>({});
+  const [workoutxConfigured, setWorkoutxConfigured] = useState(false);
   const activeFilter = searchParams.get("categoria") || "todos";
 
   const visibleWorkouts = useMemo(() => {
     if (activeFilter === "todos") return popularWorkouts;
     return popularWorkouts.filter((workout) => workout.category === activeFilter);
   }, [activeFilter]);
+
+  useEffect(() => {
+    let active = true;
+    const queries = getWorkoutXQueries(popularWorkouts);
+
+    const loadWorkoutXMedia = async () => {
+      try {
+        const params = new URLSearchParams({ queries: queries.join(",") });
+        const response = await api.get<WorkoutXMediaResponse>(`/workoutx/media?${params.toString()}`);
+
+        if (!active) return;
+        setWorkoutxConfigured(response.configured);
+        setWorkoutxMedia(response.exercises || {});
+      } catch {
+        if (!active) return;
+        setWorkoutxConfigured(false);
+        setWorkoutxMedia({});
+      }
+    };
+
+    loadWorkoutXMedia();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
@@ -234,7 +481,7 @@ export default function PopularWorkouts() {
               </div>
               <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Treinos populares</h1>
               <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
-                Veja ideias de treino com vídeos animados internos e depois registre sua execução no Caderno.
+                Veja ideias de treino com animações reais de exercícios e depois registre sua execução no Caderno.
               </p>
             </div>
           </div>
@@ -260,7 +507,12 @@ export default function PopularWorkouts() {
 
         <section className="grid gap-4 lg:grid-cols-2">
           {visibleWorkouts.map((workout) => (
-            <PopularWorkoutCard key={workout.id} workout={workout} />
+            <PopularWorkoutCard
+              key={workout.id}
+              workout={workout}
+              workoutxMedia={workoutxMedia}
+              workoutxConfigured={workoutxConfigured}
+            />
           ))}
         </section>
       </div>
