@@ -16,6 +16,7 @@ import {
   createGatewayCheckout,
   constructStripeWebhookEvent,
   getConfiguredPaymentProvider,
+  retrieveStripeCheckoutSession,
   verifyWebhookSignature,
 } from "../services/payment-gateway.service.js";
 import { markPaymentAsPaid } from "../services/payments.service.js";
@@ -26,6 +27,13 @@ const router = Router();
 const checkoutSchema = z.object({
   product_id: z.string().uuid(),
   payment_method: z.enum(["pix", "credit_card"]),
+});
+
+const confirmCheckoutSchema = z.object({
+  session_id: z.string().min(1).optional(),
+  order_id: z.string().uuid().optional(),
+}).refine((data) => data.session_id || data.order_id, {
+  message: "Informe session_id ou order_id",
 });
 
 const webhookSchema = z
@@ -307,6 +315,107 @@ router.post(
         pix_copy_paste: updatedPayment.pixCopyPaste,
       },
     });
+  }),
+);
+
+router.post(
+  "/checkout/confirm",
+  requireAuth,
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const data = confirmCheckoutSchema.parse(req.body);
+    let orderId = data.order_id ?? null;
+    let providerPaymentId: string | null = null;
+    let providerPreferenceId: string | null = data.session_id ?? null;
+    let metadataPaymentId: string | null = null;
+    let nextStatus: PaymentStatus | null = null;
+    let providerPayload: Prisma.InputJsonValue | undefined;
+
+    if (data.session_id) {
+      const session = await retrieveStripeCheckoutSession(data.session_id);
+      providerPayload = session as unknown as Prisma.InputJsonValue;
+      providerPreferenceId = session.id;
+      providerPaymentId = typeof session.payment_intent === "string" ? session.payment_intent : null;
+      metadataPaymentId = session.metadata?.payment_id ?? null;
+      orderId = session.client_reference_id ?? session.metadata?.order_id ?? orderId;
+
+      if (session.payment_status === "paid") {
+        nextStatus = PaymentStatus.PAID;
+      } else if (session.status === "expired") {
+        nextStatus = PaymentStatus.CANCELLED;
+      } else {
+        nextStatus = PaymentStatus.PROCESSING;
+      }
+    }
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Pedido nao identificado no checkout" });
+    }
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId: req.auth!.userId,
+      },
+      include: { items: true, payments: true },
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: "Pedido nao encontrado" });
+    }
+
+    const payment = order.payments.find((item) =>
+      Boolean(
+        (metadataPaymentId && item.id === metadataPaymentId) ||
+          (providerPaymentId && item.providerPaymentId === providerPaymentId) ||
+          (providerPreferenceId && item.providerPreferenceId === providerPreferenceId),
+      ),
+    ) ?? order.payments[0];
+
+    if (!payment) {
+      return res.status(404).json({ message: "Pagamento nao encontrado" });
+    }
+
+    if (providerPayload && nextStatus === PaymentStatus.PAID) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
+          providerPreferenceId: providerPreferenceId ?? payment.providerPreferenceId,
+        },
+      });
+      await markPaymentAsPaid(payment.id, providerPayload);
+    } else if (providerPayload && nextStatus) {
+      const shouldCancelOrder = nextStatus === PaymentStatus.CANCELLED;
+      await prisma.$transaction([
+        prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: nextStatus,
+            providerPaymentId: providerPaymentId ?? payment.providerPaymentId,
+            providerPreferenceId: providerPreferenceId ?? payment.providerPreferenceId,
+            rawProviderPayload: providerPayload,
+          },
+        }),
+        ...(shouldCancelOrder
+          ? [
+              prisma.order.update({
+                where: { id: order.id },
+                data: {
+                  status: OrderStatus.CANCELLED,
+                  cancelledAt: new Date(),
+                },
+              }),
+            ]
+          : []),
+      ]);
+    }
+
+    const updatedOrder = await prisma.order.findFirstOrThrow({
+      where: { id: order.id, userId: req.auth!.userId },
+      include: { items: true, payments: true },
+    });
+
+    return res.json({ order: serializeOrder(updatedOrder) });
   }),
 );
 

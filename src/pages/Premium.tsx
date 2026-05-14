@@ -69,6 +69,13 @@ interface CheckoutResponse {
   };
 }
 
+interface CheckoutConfirmResponse {
+  order: {
+    status: string;
+    payments: Array<{ status: string }>;
+  };
+}
+
 const formatCurrency = (priceCents: number, currency: string) =>
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -88,17 +95,24 @@ function FeatureRow({ children }: { children: ReactNode }) {
 
 export default function Premium() {
   const { toast } = useToast();
-  const { profile } = useProfile();
+  const { profile, refetch: refetchProfile } = useProfile();
   const location = useLocation();
   const [product, setProduct] = useState<PaymentProduct | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'credit_card'>('pix');
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [checkoutStatus, setCheckoutStatus] = useState<'idle' | 'checking' | 'paid' | 'processing' | 'failed'>('idle');
   const autoCheckoutTriggeredRef = useRef(false);
+  const checkoutConfirmationTriggeredRef = useRef(false);
+  const refetchProfileRef = useRef(refetchProfile);
   const registerFlowState = location.state as
     | { autostartCheckout?: boolean; paymentMethod?: 'pix' | 'credit_card'; fromRegister?: boolean }
     | null;
   const isPremiumActive = Boolean(profile?.is_premium);
+
+  useEffect(() => {
+    refetchProfileRef.current = refetchProfile;
+  }, [refetchProfile]);
 
   useEffect(() => {
     if (registerFlowState?.paymentMethod) {
@@ -108,15 +122,54 @@ export default function Premium() {
 
   useEffect(() => {
     const paymentStatus = new URLSearchParams(window.location.search).get('payment');
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const orderId = params.get('order_id');
 
     if (paymentStatus === 'success') {
-      toast({
-        title: 'Pagamento recebido',
-        description: 'Seu acesso Premium sera atualizado apos a confirmacao do gateway.',
-      });
+      if (checkoutConfirmationTriggeredRef.current) return;
+      checkoutConfirmationTriggeredRef.current = true;
+      setCheckoutStatus('checking');
+
+      void api
+        .post<CheckoutConfirmResponse>('/payments/checkout/confirm', {
+          session_id: sessionId || undefined,
+          order_id: orderId || undefined,
+        })
+        .then(async ({ order }) => {
+          const paymentStatus = order.payments[0]?.status;
+          const paid = order.status === 'paid' || paymentStatus === 'paid';
+
+          if (paid) {
+            setCheckoutStatus('paid');
+            await refetchProfileRef.current();
+            toast({
+              title: 'Premium liberado',
+              description: 'Pagamento confirmado. Seu acesso Premium já está ativo.',
+            });
+            return;
+          }
+
+          setCheckoutStatus('processing');
+          toast({
+            title: 'Pagamento em processamento',
+            description: 'Assim que o gateway confirmar, seu Premium será liberado automaticamente.',
+          });
+        })
+        .catch((error) => {
+          setCheckoutStatus('failed');
+          toast({
+            title: 'Não foi possível confirmar agora',
+            description: error instanceof Error ? error.message : 'O webhook ainda pode liberar seu acesso em alguns instantes.',
+            variant: 'destructive',
+          });
+        });
+
+      return;
     }
 
     if (paymentStatus === 'pending') {
+      setCheckoutStatus('processing');
       toast({
         title: 'Checkout criado',
         description: 'Conecte o gateway escolhido para finalizar pagamentos reais.',
@@ -124,6 +177,7 @@ export default function Premium() {
     }
 
     if (paymentStatus === 'cancelled') {
+      setCheckoutStatus('failed');
       toast({
         title: 'Pagamento cancelado',
         description: 'Voce pode tentar novamente quando quiser.',
@@ -360,6 +414,18 @@ export default function Premium() {
           </section>
         ) : (
           <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
+            {checkoutStatus !== 'idle' ? (
+              <div className="mb-4 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-sm text-primary">
+                {checkoutStatus === 'checking'
+                  ? 'Confirmando seu pagamento com o gateway...'
+                  : checkoutStatus === 'paid'
+                    ? 'Pagamento confirmado. Atualizando seu acesso Premium.'
+                    : checkoutStatus === 'processing'
+                      ? 'Pagamento em processamento. O acesso será liberado após a confirmação.'
+                      : 'Não foi possível confirmar o pagamento agora. Você pode tentar novamente.'}
+              </div>
+            ) : null}
+
             <div className="mb-4">
               <h3 className="text-xl font-semibold">Forma de pagamento</h3>
               <p className="mt-1 text-sm text-muted-foreground">

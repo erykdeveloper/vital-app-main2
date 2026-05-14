@@ -152,6 +152,13 @@ export async function constructStripeWebhookEvent(rawBody: Buffer | undefined, s
   return getStripeClient(stripeSecrets.secretKey).webhooks.constructEvent(rawBody, signature, webhookSecret);
 }
 
+export async function retrieveStripeCheckoutSession(sessionId: string) {
+  const stripeSecrets = await getStripeSecrets();
+  const stripe = getStripeClient(stripeSecrets.secretKey);
+
+  return stripe.checkout.sessions.retrieve(sessionId);
+}
+
 export function verifyWebhookSignature(rawBody: Buffer | undefined, signature: string | undefined) {
   if (!env.PAYMENT_WEBHOOK_SECRET) {
     return env.NODE_ENV !== "production";
