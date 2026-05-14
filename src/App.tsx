@@ -22,6 +22,7 @@ const WorkoutForm = lazy(() => import("@/pages/workouts/WorkoutForm"));
 const WorkoutHistory = lazy(() => import("@/pages/workouts/WorkoutHistory"));
 const WorkoutDashboard = lazy(() => import("@/pages/workouts/WorkoutDashboard"));
 const PopularWorkouts = lazy(() => import("@/pages/workouts/PopularWorkouts"));
+const WeburnVideos = lazy(() => import("@/pages/workouts/WeburnVideos"));
 const CardioRunning = lazy(() => import("@/pages/workouts/CardioRunning"));
 const CardioCycling = lazy(() => import("@/pages/workouts/CardioCycling"));
 const CardioOther = lazy(() => import("@/pages/workouts/CardioOther"));
@@ -81,6 +82,18 @@ const router = createBrowserRouter([
     path: "/termos-de-uso",
     element: lazyElement(Terms),
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: "/demo/workoutx",
+          element: lazyElement(PopularWorkouts),
+        },
+        {
+          path: "/demo/weburn",
+          element: lazyElement(WeburnVideos),
+        },
+      ]
+    : []),
   {
     path: "/auth/login",
     element: <Navigate to="/login" replace />,
@@ -97,6 +110,7 @@ const router = createBrowserRouter([
       { index: true, element: lazyElement(Home) },
       { path: "workouts", element: lazyElement(Workouts) },
       { path: "workouts/popular", element: lazyElement(PopularWorkouts) },
+      { path: "workouts/weburn", element: lazyElement(WeburnVideos) },
       { path: "workouts/musculacao/:type", element: lazyElement(WorkoutForm) },
       { path: "workouts/cardio/corrida", element: lazyElement(CardioRunning) },
       { path: "workouts/cardio/ciclismo", element: lazyElement(CardioCycling) },

@@ -9,6 +9,7 @@ import { getRouteParam } from "../utils/params.js";
 const router = Router();
 const WORKOUTX_BASE_URL = "https://api.workoutxapp.com/v1";
 const exerciseCache = new Map<string, WorkoutXExercise | null>();
+const mediaAuth = env.NODE_ENV === "development" ? [] : [requireAuth];
 
 const exerciseSchema = z.object({
   id: z.string(),
@@ -83,7 +84,7 @@ async function fetchExerciseByName(query: string) {
 
 router.get(
   "/media",
-  requireAuth,
+  ...mediaAuth,
   asyncHandler(async (req, res) => {
     if (!env.WORKOUTX_API_KEY) {
       return res.json({ configured: false, exercises: {} });
