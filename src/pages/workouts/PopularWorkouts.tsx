@@ -457,7 +457,7 @@ export default function PopularWorkouts() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-center text-lg font-bold">Treinos populares</h1>
+          <h1 className="text-center text-lg font-bold">Exemplos rápidos</h1>
         </header>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-card/90 shadow-elegant">
@@ -477,11 +477,11 @@ export default function PopularWorkouts() {
               </Link>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
-                Inspiração e exemplos
+                Exemplos com GIFs
               </div>
-              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Treinos populares</h1>
+              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Exemplos rápidos</h1>
               <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
-                Veja ideias de treino com animações reais de exercícios e depois registre sua execução no Caderno.
+                Veja ideias de treino com GIFs e séries rápidas, depois registre sua execução no Caderno.
               </p>
             </div>
           </div>

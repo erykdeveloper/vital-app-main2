@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Dumbbell, ExternalLink, Flame, HeartPulse, PlayCircle, Sparkles, Timer, Utensils } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 interface WeburnVideo {
@@ -97,8 +97,10 @@ function getEmbedUrl(category: WeburnCategory, videoId?: string) {
 }
 
 export default function WeburnVideos() {
-  const [activeCategoryId, setActiveCategoryId] = useState(weburnCategories[0].id);
-  const [activeVideoId, setActiveVideoId] = useState(weburnCategories[0].videos[0]?.id);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialCategory = weburnCategories.find((category) => category.id === searchParams.get("categoria")) ?? weburnCategories[0];
+  const [activeCategoryId, setActiveCategoryId] = useState(initialCategory.id);
+  const [activeVideoId, setActiveVideoId] = useState(initialCategory.videos[0]?.id);
 
   const activeCategory = useMemo(
     () => weburnCategories.find((category) => category.id === activeCategoryId) ?? weburnCategories[0],
@@ -107,9 +109,18 @@ export default function WeburnVideos() {
   const activeVideo = activeCategory.videos.find((video) => video.id === activeVideoId);
   const embedUrl = getEmbedUrl(activeCategory, activeVideo?.id);
 
+  useEffect(() => {
+    const categoryFromUrl = weburnCategories.find((category) => category.id === searchParams.get("categoria"));
+    if (!categoryFromUrl || categoryFromUrl.id === activeCategoryId) return;
+
+    setActiveCategoryId(categoryFromUrl.id);
+    setActiveVideoId(categoryFromUrl.videos[0]?.id);
+  }, [activeCategoryId, searchParams]);
+
   function selectCategory(category: WeburnCategory) {
     setActiveCategoryId(category.id);
     setActiveVideoId(category.videos[0]?.id);
+    setSearchParams({ categoria: category.id });
   }
 
   return (
@@ -123,7 +134,7 @@ export default function WeburnVideos() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-center text-lg font-bold">Weburn</h1>
+          <h1 className="text-center text-lg font-bold">Treinos populares</h1>
         </header>
 
         <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-card/90 shadow-elegant">
@@ -146,9 +157,9 @@ export default function WeburnVideos() {
                   <Sparkles className="h-4 w-4" />
                   Aulas do YouTube
                 </div>
-                <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Weburn</h1>
+                <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Treinos populares</h1>
                 <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
-                  Assista às playlists públicas do canal Weburn dentro do app, usando o player oficial do YouTube.
+                  Assista aos vídeos e playlists públicas da Weburn dentro do app, usando o player oficial do YouTube.
                 </p>
               </div>
 

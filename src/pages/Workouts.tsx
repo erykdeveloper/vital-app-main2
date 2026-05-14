@@ -186,15 +186,15 @@ export default function Workouts() {
               </p>
             </div>
             <div className="grid min-w-[340px] grid-cols-2 gap-3">
-              <Link to="/workouts/weburn" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
-                <PlayCircle className="mb-4 h-6 w-6 text-primary" />
-                <span className="block font-semibold">Weburn</span>
-                <span className="text-sm text-muted-foreground">Aulas do YouTube</span>
-              </Link>
               <Link to="/workouts/popular" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
                 <PlayCircle className="mb-4 h-6 w-6 text-primary" />
                 <span className="block font-semibold">Treinos populares</span>
-                <span className="text-sm text-muted-foreground">Vídeos e exemplos</span>
+                <span className="text-sm text-muted-foreground">Vídeos da Weburn</span>
+              </Link>
+              <Link to="/workouts/examples" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
+                <PlayCircle className="mb-4 h-6 w-6 text-primary" />
+                <span className="block font-semibold">Exemplos rápidos</span>
+                <span className="text-sm text-muted-foreground">GIFs e séries</span>
               </Link>
               <Link to="/workouts/history" className="rounded-2xl bg-secondary/80 p-4 transition-colors hover:bg-secondary">
                 <History className="mb-4 h-6 w-6 text-primary" />
@@ -207,7 +207,7 @@ export default function Workouts() {
 
         <section className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
           <Link
-            to="/workouts/weburn"
+            to="/workouts/popular"
             className="group relative isolate min-h-[150px] overflow-hidden rounded-[2rem] border border-primary/20 bg-primary/10 p-5 shadow-elegant"
           >
             <div
@@ -220,9 +220,9 @@ export default function Workouts() {
                 <PlayCircle className="h-6 w-6" />
               </span>
               <span>
-                <span className="block text-xl font-bold">Aulas Weburn</span>
+                <span className="block text-xl font-bold">Treinos populares</span>
                 <span className="mt-1 block max-w-lg text-sm leading-relaxed text-muted-foreground">
-                  Assista às playlists públicas do canal Weburn por categoria, direto no player oficial do YouTube.
+                  Assista aos vídeos da Weburn por categoria, direto no player oficial do YouTube.
                 </span>
               </span>
             </div>
@@ -231,7 +231,7 @@ export default function Workouts() {
           <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
             <p className="text-sm font-semibold text-primary">Como usar</p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Treinos populares servem como inspiração. Caderno é onde o usuário registra o treino real que executou.
+              Treinos populares servem para assistir e se inspirar. Caderno é onde o usuário registra o treino real que executou.
             </p>
           </div>
         </section>
@@ -280,14 +280,14 @@ export default function Workouts() {
 
         <section className="grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
           <Link
-            to="/workouts/popular"
+            to="/workouts/examples"
             className="flex items-center gap-4 rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant transition-colors hover:bg-secondary"
           >
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
               <PlayCircle className="h-6 w-6" />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold">Treinos populares</span>
+              <span className="block font-semibold">Exemplos rápidos</span>
               <span className="block text-sm text-muted-foreground">GIFs, séries e exemplos rápidos</span>
             </span>
           </Link>

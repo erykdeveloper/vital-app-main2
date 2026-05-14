@@ -109,7 +109,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: lazyElement(Home) },
       { path: "workouts", element: lazyElement(Workouts) },
-      { path: "workouts/popular", element: lazyElement(PopularWorkouts) },
+      { path: "workouts/popular", element: lazyElement(WeburnVideos) },
+      { path: "workouts/examples", element: lazyElement(PopularWorkouts) },
       { path: "workouts/weburn", element: lazyElement(WeburnVideos) },
       { path: "workouts/musculacao/:type", element: lazyElement(WorkoutForm) },
       { path: "workouts/cardio/corrida", element: lazyElement(CardioRunning) },
