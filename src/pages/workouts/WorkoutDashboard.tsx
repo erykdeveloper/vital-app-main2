@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { PremiumPreviewGate } from "@/components/PremiumPreviewGate";
 import { useProfile } from "@/hooks/useProfile";
 import { useReports, type ReportPeriod } from "@/hooks/useReports";
 
@@ -59,6 +60,14 @@ export default function WorkoutDashboard() {
   }
 
   if (!hasPaidStatsAccess) {
+    const previewData = [
+      { shortLabel: "Seg", calories: 240, active_minutes: 35, workouts: 1, distance_km: 3.2 },
+      { shortLabel: "Ter", calories: 380, active_minutes: 52, workouts: 2, distance_km: 0 },
+      { shortLabel: "Qua", calories: 180, active_minutes: 28, workouts: 1, distance_km: 2.4 },
+      { shortLabel: "Qui", calories: 420, active_minutes: 60, workouts: 2, distance_km: 4.1 },
+      { shortLabel: "Sex", calories: 310, active_minutes: 45, workouts: 1, distance_km: 0 },
+    ];
+
     return (
       <div className="min-h-full bg-[linear-gradient(180deg,#2a1035_0%,#31123f_100%)]">
         <div className="mx-auto flex w-full max-w-[1100px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
@@ -74,34 +83,40 @@ export default function WorkoutDashboard() {
             </div>
           </header>
 
-          <section className="rounded-[2rem] border border-primary/20 bg-[radial-gradient(circle_at_top,_rgba(255,206,96,0.14),_transparent_34%),rgba(50,17,67,0.96)] p-8 shadow-elegant">
-            <div className="mx-auto max-w-3xl text-center">
-              <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow">
-                <Crown className="h-10 w-10" />
-              </div>
-              <h2 className="text-3xl font-semibold">Suas estatísticas avançadas ficam aqui</h2>
-              <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-                Compare treinos, calorias, distância, minutos ativos e progresso corporal com uma leitura completa da sua rotina.
-              </p>
-              <div className="mt-8 grid gap-4 text-left md:grid-cols-3">
-                <div className="rounded-[1.5rem] border border-white/5 bg-[hsl(var(--card))] p-5">
-                  <p className="text-sm text-muted-foreground">Semanal</p>
-                  <p className="mt-2 text-lg font-semibold">Consistência e ritmo recente</p>
+          <PremiumPreviewGate
+            title="Desbloqueie suas estatísticas avançadas"
+            description="Veja uma prévia dos gráficos de calorias, minutos ativos, distância e frequência. Com o Premium, esses dados viram acompanhamento real da sua evolução."
+          >
+            <div className="space-y-5 p-5 md:p-6">
+              <section className="grid gap-4 md:grid-cols-3">
+                <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                  <p className="text-sm text-muted-foreground">Treinos no período</p>
+                  <p className="mt-2 text-4xl font-semibold">7</p>
                 </div>
-                <div className="rounded-[1.5rem] border border-white/5 bg-[hsl(var(--card))] p-5">
-                  <p className="text-sm text-muted-foreground">Mensal</p>
-                  <p className="mt-2 text-lg font-semibold">Volume, calorias e metas por fase</p>
+                <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                  <p className="text-sm text-muted-foreground">Calorias</p>
+                  <p className="mt-2 text-4xl font-semibold">1.530</p>
                 </div>
-                <div className="rounded-[1.5rem] border border-white/5 bg-[hsl(var(--card))] p-5">
-                  <p className="text-sm text-muted-foreground">Anual</p>
-                  <p className="mt-2 text-lg font-semibold">Histórico consolidado de evolução</p>
+                <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                  <p className="text-sm text-muted-foreground">Minutos ativos</p>
+                  <p className="mt-2 text-4xl font-semibold">220</p>
                 </div>
-              </div>
-              <Button asChild className="mt-8">
-                <Link to="/premium">Desbloquear Premium</Link>
-              </Button>
+              </section>
+
+              <section className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                <p className="mb-4 text-lg font-semibold">Tendência semanal</p>
+                <ChartContainer config={{ calories: { label: "Calorias", color: "hsl(var(--primary))" } }} className="h-[260px]">
+                  <AreaChart data={previewData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="shortLabel" />
+                    <YAxis />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area type="monotone" dataKey="calories" stroke="var(--color-calories)" fill="var(--color-calories)" fillOpacity={0.25} />
+                  </AreaChart>
+                </ChartContainer>
+              </section>
             </div>
-          </section>
+          </PremiumPreviewGate>
         </div>
       </div>
     );
