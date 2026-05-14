@@ -12,7 +12,7 @@ import {
   Trash2,
   TrendingUp,
 } from 'lucide-react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import type { ElementType } from 'react';
@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { PremiumPreviewGate } from '@/components/PremiumPreviewGate';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -100,6 +101,7 @@ export default function Injectables() {
       const response = await api.get<{ injectables: Injectable[] }>('/injectables');
       return response.injectables;
     },
+    enabled: Boolean(profile?.is_premium),
   });
 
   const sortedInjectables = useMemo(() => {
@@ -178,7 +180,68 @@ export default function Injectables() {
   }
 
   if (!profile?.is_premium) {
-    return <Navigate to="/" replace />;
+    return (
+      <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
+        <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
+          <header className="rounded-[2rem] border border-white/5 bg-card/90 p-6 shadow-elegant">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="h-11 w-11 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-colors hover:text-foreground inline-flex">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Monitoramento de Injetáveis</h1>
+                <p className="text-sm text-muted-foreground">Prévia do histórico, consistência e organização das aplicações.</p>
+              </div>
+            </div>
+          </header>
+
+          <PremiumPreviewGate
+            title="Organize suas aplicações com segurança"
+            description="No Premium, você registra medicamentos, doses, horários, locais de aplicação e acompanha consistência em um painel privado."
+          >
+            <div className="space-y-5 p-5">
+              <section className="grid gap-3 md:grid-cols-3">
+                <StatCard label="Aplicações registradas" value={8} icon={Syringe} />
+                <StatCard label="Medicamentos no histórico" value={2} icon={ShieldCheck} />
+                <StatCard label="Último local aplicado" value="Abdômen" icon={MapPin} />
+              </section>
+
+              <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold">Histórico</h2>
+                    <p className="text-sm text-muted-foreground">Registros mais recentes primeiro.</p>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {[
+                    { medication: "Aplicação exemplo", dose: "0,5 ml", location: "Abdômen", date: "Hoje" },
+                    { medication: "Rotina semanal", dose: "1 dose", location: "Coxa", date: "Segunda" },
+                  ].map((item) => (
+                    <div key={item.medication} className="rounded-2xl border border-white/5 bg-card/85 p-4 shadow-elegant">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/15">
+                          <Syringe className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold">{item.medication}</h3>
+                          <p className="text-sm text-muted-foreground">{item.dose}</p>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid gap-2 rounded-2xl bg-secondary/55 p-3 text-sm text-muted-foreground sm:grid-cols-2">
+                        <span>{item.date}</span>
+                        <span>{item.location}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          </PremiumPreviewGate>
+        </div>
+      </div>
+    );
   }
 
   return (
