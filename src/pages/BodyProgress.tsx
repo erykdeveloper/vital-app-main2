@@ -7,13 +7,14 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { PremiumPreviewGate } from "@/components/PremiumPreviewGate";
 import { useToast } from "@/hooks/use-toast";
 import { useBodyProgress, type BodyProgressPhoto, type BodyProgressPose } from "@/hooks/useBodyProgress";
 import { useProfile } from "@/hooks/useProfile";
@@ -99,7 +100,6 @@ export default function BodyProgress() {
   const { profile, loading: profileLoading } = useProfile();
   const { photos, loading, uploading, uploadPhoto, deletePhoto } = useBodyProgress();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [selectedPose, setSelectedPose] = useState<BodyProgressPose | "all">("all");
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
   const [comparePhotoId, setComparePhotoId] = useState<string | null>(null);
@@ -111,12 +111,6 @@ export default function BodyProgress() {
     notes: "",
     takenAt: new Date().toISOString().slice(0, 10),
   });
-
-  useEffect(() => {
-    if (!profileLoading && profile && !profile.is_premium) {
-      navigate("/premium");
-    }
-  }, [navigate, profile, profileLoading]);
 
   useEffect(() => {
     if (!photos.length) {
@@ -220,7 +214,79 @@ export default function BodyProgress() {
   }
 
   if (!profile?.is_premium) {
-    return null;
+    return (
+      <div className="min-h-full bg-[linear-gradient(180deg,#2a1035_0%,#31123f_100%)]">
+        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
+          <header className="rounded-[2rem] border border-white/5 bg-[rgba(50,17,67,0.96)] px-6 py-6 shadow-elegant">
+            <div className="flex items-center gap-4">
+              <Link to="/profile" className="rounded-full bg-[hsl(var(--secondary))] p-3 text-muted-foreground transition-colors hover:text-foreground">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Evolução Corporal</h1>
+                <p className="text-sm text-muted-foreground">Veja como fica seu comparador privado de fotos no Premium.</p>
+              </div>
+            </div>
+          </header>
+
+          <PremiumPreviewGate
+            title="Acompanhe sua evolução visual"
+            description="No Premium, você guarda fotos privadas por pose e compara fases lado a lado para enxergar mudança real no corpo."
+          >
+            <div className="grid gap-4 p-5 xl:grid-cols-[0.95fr_1.45fr]">
+              <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-3xl bg-primary/12 text-primary">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold">Novo registro</h2>
+                    <p className="text-sm text-muted-foreground">Foto, pose, data e observações da fase.</p>
+                  </div>
+                </div>
+                <div className="flex aspect-[4/5] items-center justify-center rounded-[1.5rem] border border-dashed border-white/10 bg-[hsl(var(--secondary))] text-muted-foreground">
+                  <div className="text-center">
+                    <ImagePlus className="mx-auto mb-3 h-8 w-8" />
+                    <p className="text-sm">Prévia do upload privado</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                    <p className="text-sm text-muted-foreground">Fotos salvas</p>
+                    <p className="mt-2 text-4xl font-semibold">12</p>
+                  </div>
+                  <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                    <p className="text-sm text-muted-foreground">Primeiro registro</p>
+                    <p className="mt-2 text-lg font-semibold">03 de jan 2026</p>
+                  </div>
+                  <div className="rounded-[1.75rem] border border-white/5 bg-[hsl(var(--card))] p-5">
+                    <p className="text-sm text-muted-foreground">Última atualização</p>
+                    <p className="mt-2 text-lg font-semibold">Hoje</p>
+                  </div>
+                </div>
+
+                <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6">
+                  <h2 className="mb-5 text-xl font-semibold">Comparação visual</h2>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {[0, 1].map((item) => (
+                      <div key={item} className="flex aspect-[4/5] items-center justify-center rounded-[1.75rem] bg-[hsl(var(--secondary))] text-center text-muted-foreground">
+                        <div>
+                          <Camera className="mx-auto mb-3 h-8 w-8" />
+                          <p className="text-sm">{item === 0 ? "Foto inicial" : "Foto atual"}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </PremiumPreviewGate>
+        </div>
+      </div>
+    );
   }
 
   return (
