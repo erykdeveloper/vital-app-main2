@@ -20,7 +20,7 @@ import {
   Watch,
   Zap,
 } from "lucide-react";
-import { format, eachDayOfInterval, endOfWeek, isSameDay, parseISO, startOfMonth, startOfWeek } from "date-fns";
+import { differenceInCalendarDays, eachDayOfInterval, endOfWeek, format, isSameDay, parseISO, startOfMonth, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -65,6 +65,34 @@ function sumMinutes(workouts: WorkoutEntry[]) {
 
 function countUniqueWorkoutDays(workouts: WorkoutEntry[]) {
   return new Set(workouts.map((workout) => workout.date.slice(0, 10))).size;
+}
+
+function capitalize(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function getBestWorkoutMonth(workouts: WorkoutEntry[]) {
+  const monthCounts = new Map<string, { date: Date; count: number }>();
+
+  workouts.forEach((workout) => {
+    const workoutDate = getWorkoutDate(workout);
+    if (Number.isNaN(workoutDate.getTime())) return;
+
+    const monthDate = new Date(workoutDate.getFullYear(), workoutDate.getMonth(), 1);
+    const key = `${monthDate.getFullYear()}-${monthDate.getMonth()}`;
+    const current = monthCounts.get(key);
+    monthCounts.set(key, {
+      date: monthDate,
+      count: (current?.count ?? 0) + 1,
+    });
+  });
+
+  return Array.from(monthCounts.values()).reduce<{ date: Date; count: number } | null>((best, current) => {
+    if (!best) return current;
+    if (current.count > best.count) return current;
+    if (current.count === best.count && current.date > best.date) return current;
+    return best;
+  }, null);
 }
 
 function getTrendLabel(current: number, previous: number) {
@@ -367,6 +395,8 @@ interface DashboardData {
   weeklyWorkoutDays: number;
   previousWeekCalories: number;
   previousWeekWorkouts: number;
+  daysSinceLastWorkout: number | null;
+  bestMonthName: string | null;
 }
 
 const initialDashboardData: DashboardData = {
@@ -382,6 +412,8 @@ const initialDashboardData: DashboardData = {
   weeklyWorkoutDays: 0,
   previousWeekCalories: 0,
   previousWeekWorkouts: 0,
+  daysSinceLastWorkout: null,
+  bestMonthName: null,
 };
 
 type WorkoutEntry = StrengthWorkoutApi | CardioWorkoutApi;
@@ -395,7 +427,7 @@ const searchItems = [
   { label: "Estatísticas Premium", description: "Relatórios pagos e evolução", to: "/workouts/dashboard", icon: BarChart3 },
   { label: "Relógio", description: "Conectar wearable e gerar ficha vital", to: "/wearables", icon: Watch },
   { label: "Conquistas", description: "Badges desbloqueados", to: "/premium", icon: Trophy },
-  { label: "Agendamentos", description: "Consultas e bioimpedância", to: "/appointments", icon: CalendarCheck },
+  { label: "Área Médica Vital", description: "Consultas, consultório e bioimpedância", to: "/appointments", icon: CalendarCheck },
 ];
 
 const quickCategories = [
@@ -454,6 +486,12 @@ export default function Home() {
           return workoutDate >= previousWeekStart && workoutDate <= previousWeekEnd;
         });
         const monthWorkouts = combined.filter((workout) => getWorkoutDate(workout) >= monthStart);
+        const latestWorkoutDate = combined.reduce<Date | null>((latest, workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          if (Number.isNaN(workoutDate.getTime())) return latest;
+          return !latest || workoutDate > latest ? workoutDate : latest;
+        }, null);
+        const bestMonth = getBestWorkoutMonth(combined);
 
         const weeklyMinutes = weekDays.map((day) =>
           combined
@@ -477,6 +515,8 @@ export default function Home() {
           weeklyWorkoutDays: countUniqueWorkoutDays(weekWorkouts),
           previousWeekCalories: sumCalories(previousWeekWorkouts),
           previousWeekWorkouts: previousWeekWorkouts.length,
+          daysSinceLastWorkout: latestWorkoutDate ? differenceInCalendarDays(dayStart, latestWorkoutDate) : null,
+          bestMonthName: bestMonth ? capitalize(format(bestMonth.date, "MMMM", { locale: ptBR })) : null,
         });
       } catch {
         if (active) {
@@ -526,7 +566,6 @@ export default function Home() {
   const fullName = profile?.full_name || "Paciente";
   const initials = getInitials(fullName);
   const bmi = profile ? calculateBMI(Number(profile.weight_kg), Number(profile.height_cm)) : 0;
-  const todayLabel = format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR });
   const maxDailyMinutes = Math.max(...dashboardData.weeklyMinutes, dashboardData.todayMinutes, 1);
   const maxDailyWorkouts = Math.max(...dashboardData.weeklyWorkoutCounts, dashboardData.todayWorkouts, 1);
   const todayMinuteProgress = clampPercentage((dashboardData.todayMinutes / maxDailyMinutes) * 100);
@@ -545,6 +584,14 @@ export default function Home() {
     if (!query) return true;
     return `${item.label} ${item.description}`.toLowerCase().includes(query);
   });
+  const inactivityMessage = dashboardData.daysSinceLastWorkout === null
+    ? "Você ainda não registrou treino. Comece hoje para acompanhar sua evolução."
+    : dashboardData.daysSinceLastWorkout > 0
+      ? `Você está há ${dashboardData.daysSinceLastWorkout} ${dashboardData.daysSinceLastWorkout === 1 ? "dia" : "dias"} sem registrar treino.`
+      : null;
+  const bestMonthMessage = dashboardData.bestMonthName
+    ? `Seu melhor mês foi ${dashboardData.bestMonthName}. Vamos superar?`
+    : null;
   const notifications = [
     dashboardData.weeklyWorkouts === 0
       ? {
@@ -624,11 +671,10 @@ export default function Home() {
       <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
         <header className="flex flex-col gap-5 rounded-[2rem] border border-white/5 bg-[rgba(50,17,67,0.96)] px-6 py-6 shadow-elegant md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">Bem-vindo(a),</p>
             <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              {firstName} <span className="inline-block">👋</span>
+              Bom dia, {firstName} <span className="inline-block">👋</span>
             </h1>
-            <p className="text-sm capitalize text-muted-foreground">{todayLabel}</p>
+            <p className="text-base text-muted-foreground">Hoje é um ótimo dia para evoluir.</p>
           </div>
 
           <div className="flex items-center gap-3 self-start md:self-auto">
@@ -709,6 +755,34 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
+        {(inactivityMessage || bestMonthMessage) ? (
+          <section className="grid gap-3 md:grid-cols-2">
+            {inactivityMessage ? (
+              <Link
+                to="/workouts"
+                className="flex items-center gap-4 rounded-[1.35rem] border border-primary/20 bg-primary/10 p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <Dumbbell className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold leading-relaxed text-foreground">{inactivityMessage}</span>
+              </Link>
+            ) : null}
+
+            {bestMonthMessage ? (
+              <Link
+                to="/workouts/dashboard"
+                className="flex items-center gap-4 rounded-[1.35rem] border border-white/5 bg-[hsl(var(--card))] p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <Trophy className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold leading-relaxed text-foreground">{bestMonthMessage}</span>
+              </Link>
+            ) : null}
+          </section>
+        ) : null}
+
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold md:text-2xl">Categorias</h2>
@@ -779,20 +853,20 @@ export default function Home() {
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-primary/15 text-primary">
-                <Watch className="h-6 w-6" />
+                <CalendarCheck className="h-6 w-6" />
               </div>
               <div className="max-w-2xl">
-                <h2 className="text-2xl font-semibold">Relógio e ficha vital</h2>
+                <h2 className="text-2xl font-semibold">Área Médica Vital</h2>
                 <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-                  Conecte Apple Health, Google Fit, Garmin ou Fitbit para acompanhar batimentos, sono e recuperação em uma ficha limpa.
+                  Agende consultas com a Dra. Gabriela, acompanhe bioimpedância e mantenha seu cuidado clínico em dia.
                 </p>
               </div>
             </div>
             <Link
-              to="/wearables"
+              to="/appointments"
               className="inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
             >
-              Conectar relógio
+              Abrir saúde
             </Link>
           </div>
         </section>

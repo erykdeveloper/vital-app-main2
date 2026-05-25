@@ -163,7 +163,7 @@ export default function Workouts() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-center text-lg font-bold">Caderno</h1>
+          <h1 className="text-center text-lg font-bold">Treinos</h1>
         </header>
 
         <section className="hidden rounded-[2rem] border border-white/5 bg-card/90 p-6 shadow-elegant md:block">
@@ -178,9 +178,9 @@ export default function Workouts() {
               </Link>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                 <Sparkles className="h-4 w-4" />
-                Caderno de treinos
+                Área de treinos
               </div>
-              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Caderno</h1>
+              <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-5xl">Treinos</h1>
               <p className="text-base leading-relaxed text-muted-foreground md:text-lg">
                 Escolha o tipo de treino para preencher o que você fez e manter sua evolução organizada.
               </p>
@@ -231,7 +231,7 @@ export default function Workouts() {
           <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant">
             <p className="text-sm font-semibold text-primary">Como usar</p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Treinos populares servem para assistir e se inspirar. Caderno é onde o usuário registra o treino real que executou.
+              Treinos populares servem para assistir e se inspirar. Esta área é onde você registra o treino real que executou.
             </p>
           </div>
         </section>
@@ -320,7 +320,7 @@ export default function Workouts() {
 
           <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-3 text-sm text-muted-foreground shadow-elegant">
             <Crown className="h-5 w-5 shrink-0 text-primary" />
-              <span>Caderno gratuito para registrar seus treinos. Estatísticas avançadas no Premium.</span>
+              <span>Área gratuita para registrar seus treinos. Estatísticas avançadas no Premium.</span>
           </div>
         </section>
       </div>

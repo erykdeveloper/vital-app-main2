@@ -173,7 +173,7 @@ export default function Appointments() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-base font-bold">Agendar consulta</h1>
+          <h1 className="text-base font-bold">Área Médica Vital</h1>
         </header>
 
         <section className="rounded-2xl border border-white/5 bg-card/90 p-5 shadow-elegant md:rounded-[2rem] md:p-6">
@@ -181,13 +181,13 @@ export default function Appointments() {
             <div className="max-w-2xl space-y-3">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                 <CalendarCheck className="h-4 w-4" />
-                Solicitação rápida
+                Área Médica Vital
               </div>
               <h1 className="hidden text-4xl font-bold leading-tight tracking-normal md:block md:text-5xl">
-                Agendar consulta
+                Área Médica Vital
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground md:text-lg">
-                Escolha o atendimento, revise seus dados e envie a solicitação. A equipe confirma data e horário pelo WhatsApp.
+                Escolha o atendimento com a Dra. Gabriela, revise seus dados e envie a solicitação. A equipe confirma data e horário pelo WhatsApp.
               </p>
             </div>
             <div className="rounded-2xl bg-secondary/70 px-5 py-4 text-sm text-muted-foreground">

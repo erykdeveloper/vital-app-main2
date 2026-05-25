@@ -5,10 +5,12 @@ import {
   Crown,
   Dumbbell,
   Heart,
+  HeartPulse,
   Watch,
   LogOut,
   Settings,
   Trophy,
+  TrendingUp,
   UserCircle2,
 } from "lucide-react";
 import { BottomNav } from "./BottomNav";
@@ -19,8 +21,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
 const patientNavItems = [
-  { to: "/", icon: Heart, label: "Dashboard" },
-  { to: "/workouts", icon: Dumbbell, label: "Caderno" },
+  { to: "/", icon: Heart, label: "Início" },
+  { to: "/body-progress", icon: TrendingUp, label: "Evolução" },
+  { to: "/workouts", icon: Dumbbell, label: "Treinos" },
+  { to: "/appointments", icon: HeartPulse, label: "Saúde" },
   { to: "/workouts/dashboard", icon: BarChart3, label: "Estatísticas" },
   { to: "/wearables", icon: Watch, label: "Relógio" },
   { to: "/premium", icon: Trophy, label: "Conquistas" },

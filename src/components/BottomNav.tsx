@@ -1,13 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, User, BookOpen, Shield, Watch } from 'lucide-react';
+import { Dumbbell, HeartPulse, Home, Shield, TrendingUp, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/hooks/useAdmin';
 
 const baseNavItems = [
   { to: '/', icon: Home, label: 'Início' },
-  { to: '/workouts', icon: BookOpen, label: 'Caderno' },
-  { to: '/wearables', icon: Watch, label: 'Relógio' },
-  { to: '/appointments', icon: Calendar, label: 'Consultas' },
+  { to: '/body-progress', icon: TrendingUp, label: 'Evolução' },
+  { to: '/workouts', icon: Dumbbell, label: 'Treinos' },
+  { to: '/appointments', icon: HeartPulse, label: 'Saúde' },
   { to: '/profile', icon: User, label: 'Perfil' },
 ];
 

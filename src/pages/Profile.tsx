@@ -41,7 +41,7 @@ const primaryActions: AccountAction[] = [
 ];
 
 const healthActions: AccountAction[] = [
-  { to: '/workouts', label: 'Treinos', description: 'Caderno e categorias', icon: Dumbbell },
+  { to: '/workouts', label: 'Treinos', description: 'Registros e categorias', icon: Dumbbell },
   { to: '/wearables', label: 'Relógio e saúde', description: 'Sincronização e alertas', icon: Watch },
   { to: '/body-progress', label: 'Evolução corporal', description: 'Peso, medidas e fotos', icon: Scale },
   { to: '/workouts/dashboard', label: 'Desempenho', description: 'Estatísticas e progresso', icon: BarChart3 },
@@ -49,7 +49,7 @@ const healthActions: AccountAction[] = [
 
 const supportActions: AccountAction[] = [
   { to: '/notifications', label: 'Notificações', description: 'Alertas e novidades', icon: SettingsIcon },
-  { to: '/appointments', label: 'Consultas', description: 'Solicitações e histórico', icon: HelpCircle },
+  { to: '/appointments', label: 'Área Médica Vital', description: 'Consultas e histórico', icon: HelpCircle },
 ];
 
 function AccountActionRow({ action }: { action: AccountAction }) {
