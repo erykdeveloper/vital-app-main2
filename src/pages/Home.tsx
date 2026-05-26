@@ -382,6 +382,129 @@ function PracticeBanner() {
   );
 }
 
+function SectionTitle({
+  title,
+  actionLabel,
+  to,
+}: {
+  title: string;
+  actionLabel?: string;
+  to?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <h2 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h2>
+      {actionLabel && to ? (
+        <Link to={to} className="text-sm font-semibold text-primary md:text-base">
+          {actionLabel}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+function DailySummaryCard({
+  icon: Icon,
+  label,
+  value,
+  helper,
+  accent = false,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  helper: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "min-w-0 rounded-[1.35rem] border p-4 shadow-elegant",
+        accent ? "border-primary/30 bg-primary/15" : "border-white/5 bg-card/85",
+      )}
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-primary">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">{label}</span>
+      </div>
+      <p className="text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{helper}</p>
+    </div>
+  );
+}
+
+function PlanItem({
+  icon: Icon,
+  title,
+  detail,
+  progress,
+  to,
+}: {
+  icon: React.ElementType;
+  title: string;
+  detail: string;
+  progress: number;
+  to: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="grid grid-cols-[40px_1fr] items-center gap-3 rounded-2xl border border-white/5 bg-background/30 p-3 transition-colors hover:bg-secondary/45"
+    >
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15 text-primary">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="flex items-center justify-between gap-3">
+          <span className="truncate text-sm font-semibold">{title}</span>
+          <span className="shrink-0 text-xs text-muted-foreground">{Math.round(clampPercentage(progress))}%</span>
+        </span>
+        <span className="mt-1 block text-xs text-muted-foreground">{detail}</span>
+        <Progress value={clampPercentage(progress)} className="mt-2 h-1.5 bg-muted [&>div]:bg-primary" />
+      </span>
+    </Link>
+  );
+}
+
+function ShortcutCard({
+  icon: Icon,
+  title,
+  helper,
+  to,
+  featured = false,
+}: {
+  icon: React.ElementType;
+  title: string;
+  helper: string;
+  to: string;
+  featured?: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={cn(
+        "group rounded-[1.35rem] border p-4 shadow-elegant transition-transform hover:-translate-y-0.5",
+        featured ? "border-primary/30 bg-primary text-primary-foreground" : "border-white/5 bg-card/85",
+      )}
+    >
+      <span
+        className={cn(
+          "mb-4 flex h-11 w-11 items-center justify-center rounded-2xl",
+          featured ? "bg-primary-foreground/15 text-primary-foreground" : "bg-secondary text-primary",
+        )}
+      >
+        <Icon className="h-5 w-5" />
+      </span>
+      <p className="text-sm font-semibold">{title}</p>
+      <p className={cn("mt-1 text-xs leading-relaxed", featured ? "text-primary-foreground/75" : "text-muted-foreground")}>
+        {helper}
+      </p>
+    </Link>
+  );
+}
+
 interface DashboardData {
   weeklyMinutes: number[];
   weeklyWorkoutCounts: number[];
@@ -665,35 +788,29 @@ export default function Home() {
       imagePosition: "right bottom",
     },
   ];
+  const dailyPlanProgress = clampPercentage(
+    (dashboardData.todayWorkouts > 0 ? 38 : 12) +
+      todayMinuteProgress * 0.35 +
+      weeklyDayProgress * 0.25 +
+      (bmi > 0 ? 10 : 0),
+  );
+  const primaryNotification = notifications[0];
 
   return (
-    <div className="min-h-full bg-[linear-gradient(180deg,#2a1035_0%,#31123f_100%)]">
-      <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
-        <header className="flex flex-col gap-5 rounded-[2rem] border border-white/5 bg-[rgba(50,17,67,0.96)] px-6 py-6 shadow-elegant md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-              Bom dia, {firstName} <span className="inline-block">👋</span>
-            </h1>
-            <p className="text-base text-muted-foreground">Hoje é um ótimo dia para evoluir.</p>
+    <div className="min-h-full bg-[linear-gradient(180deg,#17071f_0%,#2f123d_48%,#1b0925_100%)]">
+      <div className="mx-auto flex w-full max-w-[1260px] flex-col gap-5 px-4 pb-28 pt-4 md:px-7 md:pb-8 md:pt-7">
+        <header className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">App Vital</p>
+            <h1 className="mt-1 truncate text-2xl font-bold tracking-tight md:text-4xl">Olá, {firstName}</h1>
+            <p className="text-sm text-muted-foreground md:text-base">Saúde, treino e evolução no mesmo lugar.</p>
           </div>
 
-          <div className="flex items-center gap-3 self-start md:self-auto">
-            <Link
-              to="/profile"
-              className="hidden items-center gap-3 rounded-full border border-white/5 bg-[hsl(var(--secondary))] px-4 py-3 text-sm text-muted-foreground transition-colors hover:text-foreground md:flex"
-              aria-label="Abrir perfil"
-            >
-              <Avatar className="h-9 w-9 border border-white/10">
-                <AvatarImage src={profile?.avatar_url || undefined} alt={fullName} />
-                <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
-              </Avatar>
-              <span className="max-w-[180px] truncate">{fullName}</span>
-            </Link>
-
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setSearchOpen(true)}
-              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/5 bg-card/85 text-muted-foreground shadow-elegant transition-colors hover:text-foreground"
               aria-label="Pesquisar"
             >
               <Search className="h-5 w-5" />
@@ -701,13 +818,20 @@ export default function Home() {
 
             <Link
               to="/notifications"
-              className="relative flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--secondary))] text-muted-foreground transition-colors hover:text-foreground"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/5 bg-card/85 text-muted-foreground shadow-elegant transition-colors hover:text-foreground"
               aria-label="Notificações"
             >
               <Bell className="h-5 w-5" />
               {notifications.length > 0 ? (
-                <span className="absolute right-3 top-3 h-2.5 w-2.5 rounded-full bg-primary" />
+                <span className="absolute right-2.5 top-2.5 h-2.5 w-2.5 rounded-full bg-primary" />
               ) : null}
+            </Link>
+
+            <Link to="/profile" className="hidden md:block" aria-label="Abrir perfil">
+              <Avatar className="h-11 w-11 border border-white/10 shadow-elegant">
+                <AvatarImage src={profile?.avatar_url || undefined} alt={fullName} />
+                <AvatarFallback className="bg-primary text-primary-foreground">{initials}</AvatarFallback>
+              </Avatar>
             </Link>
           </div>
         </header>
@@ -755,167 +879,190 @@ export default function Home() {
           </DialogContent>
         </Dialog>
 
-        {(inactivityMessage || bestMonthMessage) ? (
-          <section className="grid gap-3 md:grid-cols-2">
-            {inactivityMessage ? (
-              <Link
-                to="/workouts"
-                className="flex items-center gap-4 rounded-[1.35rem] border border-primary/20 bg-primary/10 p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                  <Dumbbell className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold leading-relaxed text-foreground">{inactivityMessage}</span>
-              </Link>
-            ) : null}
+        <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+          <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-card/90 p-5 shadow-elegant md:p-6">
+            <div
+              className="absolute inset-y-0 right-0 hidden w-[48%] bg-cover bg-center opacity-75 md:block"
+              style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/20" />
+            <div className="relative grid gap-5 md:grid-cols-[1fr_172px] md:items-center">
+              <div className="space-y-5">
+                <div>
+                  <p className="text-sm font-semibold text-primary">Plano do dia</p>
+                  <h2 className="mt-1 text-3xl font-bold leading-tight tracking-tight md:text-4xl">
+                    Sua rotina Vital organizada.
+                  </h2>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                    Priorize treino, saúde e evolução sem procurar recursos espalhados pela dashboard.
+                  </p>
+                </div>
 
-            {bestMonthMessage ? (
-              <Link
-                to="/workouts/dashboard"
-                className="flex items-center gap-4 rounded-[1.35rem] border border-white/5 bg-[hsl(var(--card))] p-4 shadow-elegant transition-transform hover:-translate-y-0.5"
-              >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-                  <Trophy className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold leading-relaxed text-foreground">{bestMonthMessage}</span>
-              </Link>
-            ) : null}
-          </section>
-        ) : null}
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold md:text-2xl">Categorias</h2>
-            <Link to="/workouts" className="text-sm font-semibold text-primary md:text-base">
-              Ver todas
-            </Link>
-          </div>
-          <div className="flex justify-between gap-4 overflow-x-auto pb-1 hide-scrollbar md:justify-start md:gap-8">
-            {quickCategories.map((category) => (
-              <QuickCategoryLink key={category.to} {...category} />
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-xl font-semibold md:text-2xl">Treinos populares</h2>
-            <Link to="/workouts/popular" className="text-sm font-semibold text-primary md:text-base">
-              Ver todos
-            </Link>
-          </div>
-          <div className="flex gap-4 overflow-x-auto pb-1 hide-scrollbar md:grid md:grid-cols-2 xl:grid-cols-4">
-            {recommendationCards.map((card) => (
-              <RecommendationCard
-                key={card.title}
-                {...card}
-                className={cn("min-w-[154px] md:min-w-0", card.className)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <PracticeBanner />
-
-        <section className="grid gap-4 xl:grid-cols-4">
-          <TopMetricCard
-            icon={Flame}
-            title="Calorias"
-            value={formatNumber(dashboardData.monthlyCalories)}
-            helper={`${formatNumber(dashboardData.monthlyMinutes)} min ativos neste mês`}
-            highlight
-          />
-          <TopMetricCard
-            icon={Zap}
-            title="Treinos"
-            value={String(dashboardData.monthlyWorkouts)}
-            helper="registrados neste mês"
-          />
-          <TopMetricCard
-            icon={Heart}
-            title="IMC Atual"
-            value={bmi ? bmi.toFixed(1) : "--"}
-            helper={getBmiLabel(bmi)}
-          />
-          <TopMetricCard
-            icon={Trophy}
-            title="Conquistas"
-            value={String(userAchievements.length)}
-            helper={
-              achievements.length > 0
-                ? `${userAchievements.length} de ${achievements.length} desbloqueadas`
-                : "catálogo em atualização"
-            }
-          />
-        </section>
-
-        <section className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-3xl bg-primary/15 text-primary">
-                <CalendarCheck className="h-6 w-6" />
+                <div className="grid gap-3">
+                  <PlanItem
+                    icon={Dumbbell}
+                    title={dashboardData.todayWorkouts > 0 ? "Treino registrado" : "Registrar treino"}
+                    detail={
+                      dashboardData.todayWorkouts > 0
+                        ? `${dashboardData.todayWorkouts} treino(s), ${formatNumber(dashboardData.todayMinutes)} min hoje`
+                        : "Comece pela musculação, cardio ou HIIT"
+                    }
+                    progress={todayWorkoutProgress || 12}
+                    to="/workouts"
+                  />
+                  <PlanItem
+                    icon={CalendarCheck}
+                    title="Acompanhamento médico"
+                    detail="Consultas, exames e bioimpedância em Saúde"
+                    progress={bmi > 0 ? 78 : 35}
+                    to="/appointments"
+                  />
+                  <PlanItem
+                    icon={TrendingUp}
+                    title="Evolução semanal"
+                    detail={`${dashboardData.weeklyWorkoutDays} de 7 dias com atividade`}
+                    progress={weeklyDayProgress}
+                    to="/workouts/dashboard"
+                  />
+                </div>
               </div>
-              <div className="max-w-2xl">
-                <h2 className="text-2xl font-semibold">Área Médica Vital</h2>
-                <p className="mt-2 text-base leading-relaxed text-muted-foreground">
-                  Agende consultas com a Dra. Gabriela, acompanhe bioimpedância e mantenha seu cuidado clínico em dia.
-                </p>
+
+              <div className="mx-auto">
+                <CircularProgress value={dailyPlanProgress} label="plano completo" />
               </div>
             </div>
+          </div>
+
+          <aside className="grid gap-4">
             <Link
-              to="/appointments"
-              className="inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+              to={primaryNotification?.to || "/workouts"}
+              className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant transition-transform hover:-translate-y-0.5"
             >
-              Abrir saúde
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </span>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                  Próximo passo
+                </span>
+              </div>
+              <h3 className="text-xl font-semibold">{primaryNotification?.title || "Continue sua rotina"}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                {primaryNotification?.description || "Abra seus treinos para atualizar o resumo do dia."}
+              </p>
             </Link>
+
+            <div className="grid grid-cols-3 gap-3">
+              <DailySummaryCard
+                icon={Flame}
+                label="Kcal"
+                value={formatNumber(dashboardData.weeklyCalories)}
+                helper="na semana"
+                accent
+              />
+              <DailySummaryCard
+                icon={Zap}
+                label="Treinos"
+                value={String(dashboardData.weeklyWorkouts)}
+                helper="na semana"
+              />
+              <DailySummaryCard
+                icon={Heart}
+                label="IMC"
+                value={bmi ? bmi.toFixed(1) : "--"}
+                helper={getBmiLabel(bmi)}
+              />
+            </div>
+          </aside>
+        </section>
+
+        <section className="space-y-4">
+          <SectionTitle title="Acessos principais" />
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <ShortcutCard icon={Dumbbell} title="Treinos" helper="Registrar prática" to="/workouts" featured />
+            <ShortcutCard icon={BarChart3} title="Evolução" helper="Métricas e histórico" to="/workouts/dashboard" />
+            <ShortcutCard icon={CalendarCheck} title="Saúde" helper="Consultas e exames" to="/appointments" />
+            <ShortcutCard icon={UserCircle2} title="Perfil" helper="Dados e metas" to="/profile" />
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[1fr_2fr]">
-          <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold">Progresso Diário</h2>
-              <p className="text-base text-muted-foreground">Uma leitura rápida da sua rotina.</p>
+        <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant md:p-6">
+            <SectionTitle title="Resumo diário" actionLabel="Histórico" to="/workouts/history" />
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <DailySummaryCard
+                icon={Clock}
+                label="Hoje"
+                value={`${formatNumber(dashboardData.todayMinutes)}m`}
+                helper={`${dashboardData.todayWorkouts} treino(s)`}
+              />
+              <DailySummaryCard
+                icon={Footprints}
+                label="Semana"
+                value={`${dashboardData.weeklyWorkoutDays}/7`}
+                helper="dias ativos"
+              />
+              <DailySummaryCard
+                icon={Trophy}
+                label="Conq."
+                value={String(userAchievements.length)}
+                helper={achievements.length > 0 ? `de ${achievements.length}` : "ativas"}
+              />
             </div>
 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <CircularProgress value={todayMinuteProgress} label={`${formatNumber(dashboardData.todayMinutes)} min hoje`} />
-              <CircularProgress value={todayWorkoutProgress} label={`${dashboardData.todayWorkouts} treinos hoje`} />
-            </div>
+            {(inactivityMessage || bestMonthMessage) ? (
+              <div className="mt-4 grid gap-3">
+                {inactivityMessage ? (
+                  <Link
+                    to="/workouts"
+                    className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/10 p-3 text-sm font-semibold leading-relaxed transition-colors hover:bg-primary/15"
+                  >
+                    <Dumbbell className="h-5 w-5 shrink-0 text-primary" />
+                    {inactivityMessage}
+                  </Link>
+                ) : null}
+                {bestMonthMessage ? (
+                  <Link
+                    to="/workouts/dashboard"
+                    className="flex items-center gap-3 rounded-2xl border border-white/5 bg-background/30 p-3 text-sm font-semibold leading-relaxed transition-colors hover:bg-secondary/45"
+                  >
+                    <Trophy className="h-5 w-5 shrink-0 text-primary" />
+                    {bestMonthMessage}
+                  </Link>
+                ) : null}
+              </div>
+            ) : null}
           </div>
 
-          <div className="rounded-[2rem] border border-white/5 bg-[hsl(var(--card))] p-6 shadow-elegant">
-            <div className="mb-8 flex items-start justify-between gap-4">
+          <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant md:p-6">
+            <div className="mb-6 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-semibold">Atividade Semanal</h2>
-                <p className="text-base text-muted-foreground">Últimos 7 dias</p>
+                <h2 className="text-xl font-semibold tracking-tight md:text-2xl">Atividade semanal</h2>
+                <p className="text-sm text-muted-foreground">Minutos ativos por dia</p>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="h-4 w-4 rounded-full bg-primary" />
-                <span>Minutos ativos</span>
-              </div>
+              <Link to="/workouts/dashboard" className="text-sm font-semibold text-primary">
+                Ver detalhes
+              </Link>
             </div>
 
-            <div className="flex min-h-[230px] items-end justify-between gap-3 md:gap-6">
+            <div className="flex min-h-[180px] items-end justify-between gap-3 md:gap-5">
               {dashboardData.weeklyMinutes.map((minutes, index) => {
-                const height = minutes > 0 ? Math.max(18, Math.round((minutes / maxMinutes) * 108)) : 0;
+                const height = minutes > 0 ? Math.max(18, Math.round((minutes / maxMinutes) * 108)) : 8;
                 const isCurrent = index === currentWeekDay;
 
                 return (
-                  <div key={weekDays[index]} className="flex flex-1 flex-col items-center gap-4">
+                  <div key={weekDays[index]} className="flex flex-1 flex-col items-center gap-3">
                     <div
                       className={cn(
-                        "w-full max-w-[42px] rounded-t-[1.6rem] transition-all duration-300",
-                        minutes > 0 && isCurrent ? "gold-highlight" : "bg-[hsl(var(--secondary))]",
-                        minutes === 0 ? "opacity-35" : ""
+                        "w-full max-w-[38px] rounded-full transition-all duration-300",
+                        minutes > 0 && isCurrent ? "gold-highlight" : "bg-secondary",
+                        minutes === 0 ? "opacity-40" : "",
                       )}
                       style={{ height: `${height}px` }}
                     />
-                    <div className="text-center">
-                      <p className={cn("text-lg", isCurrent ? "text-primary" : "text-muted-foreground")}>
-                        {weekDays[index]}
-                      </p>
-                    </div>
+                    <p className={cn("text-xs font-semibold", isCurrent ? "text-primary" : "text-muted-foreground")}>
+                      {weekDays[index]}
+                    </p>
                   </div>
                 );
               })}
@@ -924,13 +1071,7 @@ export default function Home() {
         </section>
 
         <section className="space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <h2 className="text-2xl font-semibold">Resumo da Semana</h2>
-            <Link to="/workouts/dashboard" className="text-lg font-medium text-primary">
-              Ver Premium
-            </Link>
-          </div>
-
+          <SectionTitle title="Evolução rápida" actionLabel="Premium" to="/workouts/dashboard" />
           <div className="grid gap-4 xl:grid-cols-3">
             <GoalCard
               title="Calorias Queimadas"
@@ -959,39 +1100,47 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-[2rem] border border-white/5 bg-[rgba(50,17,67,0.96)] p-6 shadow-elegant">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="max-w-2xl space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                <Sparkles className="h-4 w-4" />
-                Painel pessoal Vitalissy
+        <section className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant md:p-6">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                <CalendarCheck className="h-6 w-6" />
               </div>
-              <h2 className="text-2xl font-semibold md:text-3xl">Seu acompanhamento em um só lugar</h2>
-              <p className="text-base leading-relaxed text-muted-foreground">
-                A dashboard agora destaca progresso, rotina semanal e acessos importantes em um layout mais elegante e direto.
-              </p>
+              <div className="max-w-2xl">
+                <h2 className="text-xl font-semibold md:text-2xl">Saúde integrada</h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-base">
+                  Consultas, bioimpedância, exames e protocolos ficam agrupados na área de saúde.
+                </p>
+              </div>
             </div>
+            <Link
+              to="/appointments"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+            >
+              Abrir saúde
+            </Link>
+          </div>
+        </section>
 
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Link
-                to="/workouts"
-                className="rounded-[1.4rem] bg-[hsl(var(--secondary))] px-5 py-4 text-center text-sm font-medium transition-transform hover:-translate-y-0.5"
-              >
-                Abrir treinos
-              </Link>
-              <Link
-                to="/workouts/history"
-                className="rounded-[1.4rem] bg-[hsl(var(--secondary))] px-5 py-4 text-center text-sm font-medium transition-transform hover:-translate-y-0.5"
-              >
-                Histórico
-              </Link>
-              <Link
-                to="/profile"
-                className="rounded-[1.4rem] bg-primary px-5 py-4 text-center text-sm font-medium text-primary-foreground transition-transform hover:-translate-y-0.5"
-              >
-                Meu perfil
-              </Link>
-            </div>
+        <section className="space-y-4">
+          <SectionTitle title="Treinos sugeridos" actionLabel="Ver todos" to="/workouts/popular" />
+          <div className="flex gap-4 overflow-x-auto pb-1 hide-scrollbar md:grid md:grid-cols-2 xl:grid-cols-4">
+            {recommendationCards.map((card) => (
+              <RecommendationCard
+                key={card.title}
+                {...card}
+                className={cn("min-w-[186px] md:min-w-0", card.className)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <SectionTitle title="Categorias de treino" actionLabel="Ver todas" to="/workouts" />
+          <div className="flex justify-between gap-4 overflow-x-auto pb-1 hide-scrollbar md:justify-start md:gap-8">
+            {quickCategories.map((category) => (
+              <QuickCategoryLink key={category.to} {...category} />
+            ))}
           </div>
         </section>
       </div>
