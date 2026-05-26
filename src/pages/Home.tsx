@@ -882,53 +882,47 @@ export default function Home() {
         <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="relative overflow-hidden rounded-[2rem] border border-primary/20 bg-card/90 p-5 shadow-elegant md:p-6">
             <div
-              className="absolute inset-y-0 right-0 hidden w-[48%] bg-cover bg-center opacity-75 md:block"
+              className="absolute inset-y-0 right-0 hidden w-[46%] bg-cover bg-center opacity-70 md:block"
               style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/20" />
             <div className="relative grid gap-5 md:grid-cols-[1fr_172px] md:items-center">
               <div className="space-y-5">
                 <div>
-                  <p className="text-sm font-semibold text-primary">Plano do dia</p>
+                  <p className="text-sm font-semibold text-primary">Resultados</p>
                   <h2 className="mt-1 text-3xl font-bold leading-tight tracking-tight md:text-4xl">
-                    Sua rotina Vital organizada.
+                    Seu progresso em foco.
                   </h2>
                   <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-                    Priorize treino, saúde e evolução sem procurar recursos espalhados pela dashboard.
+                    Veja primeiro o que já aconteceu hoje e nesta semana. O plano fica mais abaixo para orientar o próximo passo.
                   </p>
                 </div>
 
-                <div className="grid gap-3">
-                  <PlanItem
-                    icon={Dumbbell}
-                    title={dashboardData.todayWorkouts > 0 ? "Treino registrado" : "Registrar treino"}
-                    detail={
-                      dashboardData.todayWorkouts > 0
-                        ? `${dashboardData.todayWorkouts} treino(s), ${formatNumber(dashboardData.todayMinutes)} min hoje`
-                        : "Comece pela musculação, cardio ou HIIT"
-                    }
-                    progress={todayWorkoutProgress || 12}
-                    to="/workouts"
+                <div className="grid grid-cols-3 gap-3">
+                  <DailySummaryCard
+                    icon={Clock}
+                    label="Hoje"
+                    value={`${formatNumber(dashboardData.todayMinutes)}m`}
+                    helper={`${dashboardData.todayWorkouts} treino(s)`}
+                    accent
                   />
-                  <PlanItem
-                    icon={CalendarCheck}
-                    title="Acompanhamento médico"
-                    detail="Consultas, exames e bioimpedância em Saúde"
-                    progress={bmi > 0 ? 78 : 35}
-                    to="/appointments"
+                  <DailySummaryCard
+                    icon={Flame}
+                    label="Kcal"
+                    value={formatNumber(dashboardData.weeklyCalories)}
+                    helper="na semana"
                   />
-                  <PlanItem
-                    icon={TrendingUp}
-                    title="Evolução semanal"
-                    detail={`${dashboardData.weeklyWorkoutDays} de 7 dias com atividade`}
-                    progress={weeklyDayProgress}
-                    to="/workouts/dashboard"
+                  <DailySummaryCard
+                    icon={Footprints}
+                    label="Semana"
+                    value={`${dashboardData.weeklyWorkoutDays}/7`}
+                    helper="dias ativos"
                   />
                 </div>
               </div>
 
               <div className="mx-auto">
-                <CircularProgress value={dailyPlanProgress} label="plano completo" />
+                <CircularProgress value={weeklyDayProgress} label="semana ativa" />
               </div>
             </div>
           </div>
@@ -1119,6 +1113,54 @@ export default function Home() {
             >
               Abrir saúde
             </Link>
+          </div>
+        </section>
+
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant md:p-6">
+          <div className="absolute inset-y-0 right-0 hidden w-[32%] bg-[url('/images/workout-examples-ai.jpg')] bg-cover bg-center opacity-35 lg:block" />
+          <div className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/70" />
+          <div className="relative grid gap-5 lg:grid-cols-[1fr_176px] lg:items-center">
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm font-semibold text-primary">Plano do dia</p>
+                <h2 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">Próximos passos recomendados</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground md:text-base">
+                  Use este bloco depois de conferir os resultados para decidir onde continuar.
+                </p>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-3">
+                <PlanItem
+                  icon={Dumbbell}
+                  title={dashboardData.todayWorkouts > 0 ? "Treino registrado" : "Registrar treino"}
+                  detail={
+                    dashboardData.todayWorkouts > 0
+                      ? `${dashboardData.todayWorkouts} treino(s), ${formatNumber(dashboardData.todayMinutes)} min hoje`
+                      : "Comece pela musculação, cardio ou HIIT"
+                  }
+                  progress={todayWorkoutProgress || 12}
+                  to="/workouts"
+                />
+                <PlanItem
+                  icon={CalendarCheck}
+                  title="Acompanhamento médico"
+                  detail="Consultas, exames e bioimpedância"
+                  progress={bmi > 0 ? 78 : 35}
+                  to="/appointments"
+                />
+                <PlanItem
+                  icon={TrendingUp}
+                  title="Evolução semanal"
+                  detail={`${dashboardData.weeklyWorkoutDays} de 7 dias com atividade`}
+                  progress={weeklyDayProgress}
+                  to="/workouts/dashboard"
+                />
+              </div>
+            </div>
+
+            <div className="hidden lg:block">
+              <CircularProgress value={dailyPlanProgress} label="plano completo" />
+            </div>
           </div>
         </section>
 
