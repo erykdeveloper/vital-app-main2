@@ -287,6 +287,7 @@ export default function CardioCycling() {
         open={isBlocked}
         onDiscard={proceed}
         onSave={handleSaveAndNavigate}
+        onContinue={reset}
         saving={saving}
       />
     </div>

@@ -455,21 +455,39 @@ export default function WorkoutForm() {
   const handleSaveWorkout = async () => {
     if (!user) {
       toast.error("Você precisa estar logado");
-      return;
+      return false;
     }
 
     if (!objective.trim()) {
       toast.error("Informe o tipo de treino");
-      return;
+      return false;
     }
 
     if (addedExercises.length === 0) {
       toast.error("Adicione pelo menos um exercício");
-      return;
+      return false;
+    }
+
+    const exercisesToSave = addedExercises.map((exercise) => ({
+      name: exercise.name.trim(),
+      sets: exercise.sets.map((set) => ({
+        reps: Number(set.reps) || 0,
+        weight: Number(set.weight) || 0,
+      })),
+    }));
+
+    const invalidExercise = exercisesToSave.find(
+      (exercise) => !exercise.name || exercise.sets.length === 0 || exercise.sets.some((set) => set.reps <= 0),
+    );
+
+    if (invalidExercise) {
+      toast.error("Revise os exercícios: cada série precisa ter pelo menos 1 repetição.");
+      return false;
     }
 
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
+    const durationMin = totalMinutes > 0 ? Math.max(1, Math.round(totalMinutes)) : null;
 
     setSaving(true);
     try {
@@ -477,9 +495,9 @@ export default function WorkoutForm() {
         user_id: user.id,
         date: today.toISOString().split("T")[0],
         objective: objective.trim(),
-        duration_min: totalMinutes > 0 ? Math.round(totalMinutes * 100) / 100 : null,
+        duration_min: durationMin,
         calories: calories || null,
-        exercises: addedExercises as unknown,
+        exercises: exercisesToSave as unknown,
         workout_type: type,
       };
 
@@ -495,6 +513,7 @@ export default function WorkoutForm() {
       setDurationMin("");
       setDurationSec("");
       setCalories("");
+      return true;
     } catch (error: any) {
       const message = error.message || '';
       
@@ -506,6 +525,7 @@ export default function WorkoutForm() {
       } else {
         toast.error('Erro ao salvar treino: ' + message);
       }
+      return false;
     } finally {
       setSaving(false);
     }
@@ -513,8 +533,10 @@ export default function WorkoutForm() {
 
   // Função para salvar e navegar (usado no dialog de alterações não salvas)
   const handleSaveAndNavigate = async () => {
-    await handleSaveWorkout();
-    proceed();
+    const saved = await handleSaveWorkout();
+    if (saved) {
+      proceed();
+    }
   };
 
   // Função para descartar e navegar (usado no dialog de alterações não salvas)
@@ -535,8 +557,8 @@ export default function WorkoutForm() {
   const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${addedExercises.length} exercícios)`;
 
   return (
-    <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
-      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-6 px-4 pb-36 pt-4 md:px-7 md:pb-8 md:pt-7">
+    <div className="min-h-full overflow-x-hidden bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
+      <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 px-3 pb-36 pt-4 sm:px-4 md:px-7 md:pb-8 md:pt-7">
       <header className="relative flex h-12 items-center justify-center md:hidden">
         <Link
           to="/workouts"
@@ -626,8 +648,8 @@ export default function WorkoutForm() {
         ))}
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        <div className="space-y-6">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-6">
       {/* Workout Form */}
       <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant space-y-5">
         <div className="flex items-center gap-3">
@@ -738,9 +760,9 @@ export default function WorkoutForm() {
       </div>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
       {/* Workout Summary */}
-      <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant space-y-4">
+      <div className="space-y-4 rounded-[1.5rem] border border-white/5 bg-card/85 p-4 shadow-elegant sm:rounded-[2rem] sm:p-5">
         <div>
           <h2 className="text-lg font-semibold">Resumo do treino</h2>
           <p className="text-sm text-muted-foreground">Complete antes de salvar no histórico.</p>
@@ -752,7 +774,7 @@ export default function WorkoutForm() {
               <Clock className="w-4 h-4 text-accent" />
               <Label className="text-sm">Duração</Label>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               <div className="relative">
                 <Input
                   type="text"
@@ -777,7 +799,7 @@ export default function WorkoutForm() {
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
               </div>
-              <div className="relative">
+              <div className="relative col-span-2 sm:col-span-1">
                 <Input
                   type="text"
                   inputMode="numeric"
@@ -923,6 +945,7 @@ export default function WorkoutForm() {
         open={isBlocked}
         onDiscard={handleDiscardAndNavigate}
         onSave={handleSaveAndNavigate}
+        onContinue={reset}
         saving={saving}
       />
 

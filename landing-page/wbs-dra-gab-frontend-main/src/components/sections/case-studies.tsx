@@ -132,13 +132,17 @@ export function CaseStudies() {
   const handleInteractionStart = () => {
     try {
       autoplay.current.stop();
-    } catch {}
+    } catch {
+      // Autoplay may already be stopped while Embla is settling.
+    }
   };
 
   const handleInteractionEnd = () => {
     try {
       autoplay.current.play();
-    } catch {}
+    } catch {
+      // Autoplay may not be ready immediately after a drag interaction.
+    }
   };
 
   return (

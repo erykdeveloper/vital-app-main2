@@ -300,6 +300,7 @@ export default function CardioOther() {
         open={isBlocked}
         onDiscard={handleDiscardAndLeave}
         onSave={handleSaveAndLeave}
+        onContinue={reset}
         saving={isSaving}
       />
     </div>

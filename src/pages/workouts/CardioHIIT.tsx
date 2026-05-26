@@ -423,6 +423,7 @@ export default function CardioHIIT() {
         open={isBlocked}
         onDiscard={proceed}
         onSave={handleSaveAndNavigate}
+        onContinue={reset}
         saving={saving}
       />
 
