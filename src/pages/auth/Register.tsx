@@ -63,7 +63,7 @@ export default function Register() {
 
   if (authLoading) {
     return (
-      <div className="flex h-[100svh] items-center justify-center bg-background">
+      <div className="flex h-[100dvh] items-center justify-center bg-background">
         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-accent" />
       </div>
     );
@@ -248,9 +248,9 @@ export default function Register() {
   };
 
   return (
-    <div className="h-[100svh] overflow-y-auto bg-background px-6 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] pt-[calc(env(safe-area-inset-top,0px)+2rem)] text-foreground lg:px-10">
+    <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background px-6 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] pt-[calc(env(safe-area-inset-top,0px)+2rem)] text-foreground [-webkit-overflow-scrolling:touch] lg:px-10">
       <div className="mx-auto grid w-full max-w-[430px] gap-8 pb-12 lg:max-w-[1180px] lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
-        <aside className="sticky top-8 hidden min-h-[calc(100svh-4rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-card/70 p-8 shadow-elegant lg:flex lg:flex-col lg:justify-between">
+        <aside className="sticky top-8 hidden min-h-[calc(100dvh-4rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-card/70 p-8 shadow-elegant lg:flex lg:flex-col lg:justify-between">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-20"
             style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
