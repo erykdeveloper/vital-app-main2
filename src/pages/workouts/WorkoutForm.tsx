@@ -140,6 +140,7 @@ export default function WorkoutForm() {
     date: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Detectar se há dados não salvos
   const hasCurrentExerciseData = !!(
@@ -478,13 +479,19 @@ export default function WorkoutForm() {
   };
 
   const handleSaveWorkout = async () => {
+    setSaveError(null);
+
     if (!user) {
-      toast.error("Você precisa estar logado");
+      const message = "Você precisa estar logado novamente para salvar o treino";
+      setSaveError(message);
+      toast.error(message);
       return false;
     }
 
     if (!objective.trim()) {
-      toast.error("Informe o tipo de treino");
+      const message = "Informe o tipo de treino";
+      setSaveError(message);
+      toast.error(message);
       return false;
     }
 
@@ -492,28 +499,29 @@ export default function WorkoutForm() {
 
     if (hasCurrentExerciseData) {
       const currentExerciseForSave = normalizeExercise(currentExercise);
+      const currentExerciseIsComplete =
+        currentExerciseForSave.name &&
+        currentExerciseForSave.sets.length > 0 &&
+        currentExerciseForSave.sets.every((set) => set.reps > 0);
 
-      if (!currentExerciseForSave.name) {
-        toast.error("Complete o nome do exercício em aberto antes de salvar");
-        return false;
-      }
-
-      if (currentExerciseForSave.sets.length === 0) {
-        toast.error("Informe pelo menos uma série no exercício em aberto");
-        return false;
-      }
-
-      if (editingIndex !== null) {
+      if (currentExerciseIsComplete && editingIndex !== null) {
         exercisesForSave = exercisesForSave.map((exercise, index) =>
           index === editingIndex ? currentExerciseForSave : exercise,
         );
-      } else {
+      } else if (currentExerciseIsComplete) {
         exercisesForSave = [...exercisesForSave, currentExerciseForSave];
+      } else if (addedExercises.length === 0) {
+        const message = "Complete o exercício em aberto antes de salvar";
+        setSaveError(message);
+        toast.error(message);
+        return false;
       }
     }
 
     if (exercisesForSave.length === 0) {
-      toast.error("Adicione pelo menos um exercício");
+      const message = "Adicione pelo menos um exercício";
+      setSaveError(message);
+      toast.error(message);
       return false;
     }
 
@@ -527,7 +535,9 @@ export default function WorkoutForm() {
     );
 
     if (invalidExercise) {
-      toast.error("Revise os exercícios: cada série precisa ter pelo menos 1 repetição.");
+      const message = "Revise os exercícios: cada série precisa ter pelo menos 1 repetição.";
+      setSaveError(message);
+      toast.error(message);
       return false;
     }
 
@@ -558,18 +568,22 @@ export default function WorkoutForm() {
       setDurationMin("");
       setDurationSec("");
       setCalories("");
+      setSaveError(null);
       return true;
     } catch (error: any) {
       const message = error.message || '';
+      let userMessage = '';
       
       if (message.includes('Load Failed') || 
           message.includes('NetworkError') ||
           message.includes('fetch') ||
           message.includes('network')) {
-        toast.error('Erro de conexão. Seus dados estão salvos localmente. Tente novamente.');
+        userMessage = 'Erro de conexão. Seus dados estão salvos localmente. Tente novamente.';
       } else {
-        toast.error('Erro ao salvar treino: ' + message);
+        userMessage = `Erro ao salvar treino: ${message || 'tente novamente em alguns instantes'}`;
       }
+      setSaveError(userMessage);
+      toast.error(userMessage);
       return false;
     } finally {
       setSaving(false);
@@ -765,12 +779,18 @@ export default function WorkoutForm() {
             </div>
             <div className="border-t border-white/10" />
             <Button
+              type="button"
               onClick={handleSaveWorkout}
               disabled={saveDisabled}
               className="h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:hidden"
             >
               {saveButtonLabel}
             </Button>
+            {saveError && (
+              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+                {saveError}
+              </p>
+            )}
           </div>
         )}
 
@@ -915,12 +935,18 @@ export default function WorkoutForm() {
         </div>
 
         <Button
+          type="button"
           onClick={handleSaveWorkout}
           disabled={saveDisabled}
           className="hidden h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:inline-flex"
         >
           {saveButtonLabel}
         </Button>
+        {saveError && (
+          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+            {saveError}
+          </p>
+        )}
       </div>
         </aside>
       </div>
