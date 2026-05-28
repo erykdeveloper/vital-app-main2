@@ -221,6 +221,7 @@ export default function WorkoutForm() {
   // Wake Lock and Audio refs
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const savePressLockRef = useRef(false);
 
   // Request Wake Lock to prevent screen from locking
   const requestWakeLock = async () => {
@@ -617,6 +618,17 @@ export default function WorkoutForm() {
         ? "border-primary/30 bg-primary/10 text-primary"
         : "border-destructive/30 bg-destructive/10 text-destructive";
 
+  const handleSaveButtonPress = () => {
+    if (saveDisabled || savePressLockRef.current) return;
+
+    savePressLockRef.current = true;
+    void handleSaveWorkout().finally(() => {
+      window.setTimeout(() => {
+        savePressLockRef.current = false;
+      }, 300);
+    });
+  };
+
   return (
     <div className="min-h-full overflow-x-hidden bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
       <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+8rem)] pt-2 sm:px-4 md:px-7 md:pb-8 md:pt-7">
@@ -778,17 +790,18 @@ export default function WorkoutForm() {
               ))}
             </div>
             <div className="border-t border-white/10" />
-            <Button
+            <button
               type="button"
-              onClick={handleSaveWorkout}
+              onPointerUp={handleSaveButtonPress}
+              onClick={handleSaveButtonPress}
               disabled={saveDisabled}
-              className="h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:hidden"
+              className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow transition-opacity hover:opacity-95 disabled:pointer-events-none disabled:opacity-50 lg:hidden"
             >
               {saveButtonLabel}
-            </Button>
-            {saveError && (
-              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
-                {saveError}
+            </button>
+            {saveFeedback && (
+              <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${saveFeedbackClassName}`}>
+                {saveFeedback.message}
               </p>
             )}
           </div>
@@ -936,15 +949,15 @@ export default function WorkoutForm() {
 
         <Button
           type="button"
-          onClick={handleSaveWorkout}
+          onClick={handleSaveButtonPress}
           disabled={saveDisabled}
           className="hidden h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:inline-flex"
         >
           {saveButtonLabel}
         </Button>
-        {saveError && (
-          <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
-            {saveError}
+        {saveFeedback && (
+          <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${saveFeedbackClassName}`}>
+            {saveFeedback.message}
           </p>
         )}
       </div>
