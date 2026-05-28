@@ -118,6 +118,16 @@ html, body, #root {
   overflow: hidden;
 }
 
+html.auth-scroll-page,
+html.auth-scroll-page body,
+html.auth-scroll-page #root,
+body.auth-scroll-page,
+body.auth-scroll-page #root {
+  min-height: 100%;
+  height: auto;
+  overflow-y: auto;
+}
+
 .app-container {
   height: 100%;
   display: flex;
