@@ -11,6 +11,10 @@ export interface Profile {
   height_cm: number;
   weight_kg: number;
   is_premium: boolean;
+  account_type?: 'client' | 'personal';
+  selected_plan?: 'essential' | 'premium' | null;
+  initial_payment_method?: 'pix' | 'credit_card' | null;
+  terms_accepted_at?: string | null;
   created_at: string;
   entry_date: string | null;
   avatar_url: string | null;

@@ -11,6 +11,8 @@ interface RegisterPayload {
   password: string;
   terms_accepted: boolean;
   account_type?: 'client' | 'personal';
+  selected_plan?: 'essential' | 'premium';
+  initial_payment_method?: 'pix' | 'credit_card' | null;
   trainer_application?: {
     cref: string;
     cref_state: string;

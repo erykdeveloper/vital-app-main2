@@ -148,6 +148,10 @@ model Profile {
   heightCm  Int
   weightKg  Decimal   @db.Decimal(10, 2)
   isPremium Boolean   @default(false)
+  accountType String   @default("client")
+  selectedPlan String?
+  initialPaymentMethod String?
+  termsAcceptedAt DateTime?
   entryDate DateTime?
   avatarUrl String?
   createdAt DateTime  @default(now())

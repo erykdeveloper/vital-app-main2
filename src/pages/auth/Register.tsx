@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 
 const acceptedProofTypes = ['image/jpeg', 'image/png', 'image/webp'];
 const maxProofFileSize = 5 * 1024 * 1024;
+const minPhoneDigits = 10;
+const maxPhoneDigits = 11;
 const validBrazilianStates = [
   'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
   'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
@@ -100,6 +102,11 @@ export default function Register() {
     setFormData((prev) => ({ ...prev, weight_kg: formatted }));
   };
 
+  const handlePhoneInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, maxPhoneDigits);
+    setFormData((prev) => ({ ...prev, phone: digitsOnly }));
+  };
+
   const validateForm = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -116,6 +123,13 @@ export default function Register() {
     }
     if (!termsAccepted) {
       toast({ variant: 'destructive', title: 'Aceite os Termos de Uso para continuar' });
+      return false;
+    }
+    if (
+      formData.phone &&
+      (formData.phone.length < minPhoneDigits || formData.phone.length > maxPhoneDigits)
+    ) {
+      toast({ variant: 'destructive', title: 'Telefone deve ter 10 ou 11 números com DDD' });
       return false;
     }
     if (accountType === 'personal') {
@@ -186,6 +200,10 @@ export default function Register() {
         payload.append('password', formData.password);
         payload.append('terms_accepted', String(termsAccepted));
         payload.append('account_type', accountType);
+        payload.append('selected_plan', selectedPlan);
+        if (selectedPlan === 'premium') {
+          payload.append('initial_payment_method', paymentMethod);
+        }
         payload.append('trainer_application', JSON.stringify(trainerApplication));
         payload.append('self_photo', selfPhoto!);
         payload.append('document_photo', documentPhoto!);
@@ -201,6 +219,8 @@ export default function Register() {
         password: formData.password,
         terms_accepted: termsAccepted,
         account_type: accountType,
+        selected_plan: selectedPlan,
+        initial_payment_method: selectedPlan === 'premium' ? paymentMethod : null,
         trainer_application: trainerApplication,
         });
       }
@@ -248,8 +268,8 @@ export default function Register() {
   };
 
   return (
-    <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background px-6 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)] pt-[calc(env(safe-area-inset-top,0px)+2rem)] text-foreground [-webkit-overflow-scrolling:touch] lg:px-10">
-      <div className="mx-auto grid w-full max-w-[430px] gap-8 pb-12 lg:max-w-[1180px] lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
+    <div className="h-[100dvh] overflow-y-auto overscroll-contain bg-background px-6 pb-[calc(env(safe-area-inset-bottom,0px)+8rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)] text-foreground [-webkit-overflow-scrolling:touch] lg:px-10 lg:pb-8 lg:pt-8">
+      <div className="mx-auto grid w-full max-w-[430px] gap-8 pb-16 lg:max-w-[1180px] lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
         <aside className="sticky top-8 hidden min-h-[calc(100dvh-4rem)] overflow-hidden rounded-[2rem] border border-white/10 bg-card/70 p-8 shadow-elegant lg:flex lg:flex-col lg:justify-between">
           <div
             className="absolute inset-0 bg-cover bg-center opacity-20"
@@ -293,7 +313,7 @@ export default function Register() {
         </aside>
 
         <div className="space-y-6 lg:rounded-[2rem] lg:border lg:border-white/5 lg:bg-card/70 lg:p-8 lg:shadow-elegant">
-        <div className="grid h-14 grid-cols-[44px_1fr_44px] items-center">
+        <div className="sticky top-0 z-30 -mx-6 grid h-14 grid-cols-[44px_1fr_44px] items-center border-b border-white/5 bg-background/90 px-6 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none">
           <Link
             to="/onboarding"
             className="flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
@@ -376,9 +396,12 @@ export default function Register() {
             <Input
               id="phone"
               name="phone"
-              placeholder="(00) 00000-0000"
+              type="text"
+              inputMode="numeric"
+              maxLength={maxPhoneDigits}
+              placeholder="62981710000"
               value={formData.phone}
-              onChange={handleChange}
+              onChange={handlePhoneInput}
               className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
             />
           </div>

@@ -55,6 +55,13 @@ function parseBoolean(value: unknown) {
   return value === true || value === "true";
 }
 
+function normalizeOptionalPhone(value: unknown) {
+  if (typeof value !== "string") return value;
+
+  const digits = value.replace(/\D/g, "");
+  return digits || null;
+}
+
 const validBrazilianStates = new Set([
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
@@ -75,7 +82,10 @@ function validateCref(cref: string, state: string) {
 const registerSchema = z.object({
   full_name: z.string().min(3),
   email: z.string().email(),
-  phone: z.string().optional().nullable(),
+  phone: z.preprocess(
+    normalizeOptionalPhone,
+    z.string().regex(/^\d{10,11}$/, "Telefone deve ter 10 ou 11 numeros com DDD").optional().nullable(),
+  ),
   age: z.coerce.number().int().positive(),
   height_cm: z.coerce.number().int().positive(),
   weight_kg: z.coerce.number().positive(),
@@ -84,6 +94,8 @@ const registerSchema = z.object({
     errorMap: () => ({ message: "Aceite os Termos de Uso para criar sua conta" }),
   })),
   account_type: z.enum(["client", "personal"]).default("client"),
+  selected_plan: z.enum(["essential", "premium"]).optional().default("essential"),
+  initial_payment_method: z.enum(["pix", "credit_card"]).optional().nullable(),
   trainer_application: z.preprocess(parseMaybeJson, z
     .object({
       cref: z.string().min(3),
@@ -162,6 +174,13 @@ router.post(
               age: data.age,
               heightCm: data.height_cm,
               weightKg: data.weight_kg.toString(),
+              accountType: data.account_type,
+              selectedPlan: data.account_type === "client" ? data.selected_plan : null,
+              initialPaymentMethod:
+                data.account_type === "client" && data.selected_plan === "premium"
+                  ? data.initial_payment_method ?? null
+                  : null,
+              termsAcceptedAt: new Date(),
               entryDate: new Date(),
             },
           },

@@ -69,6 +69,19 @@ const emptyExercise: Exercise = {
   ],
 };
 
+const getFilledSets = (sets: ExerciseSet[]) =>
+  sets
+    .map((set) => ({
+      reps: Number(set.reps) || 0,
+      weight: Number(set.weight) || 0,
+    }))
+    .filter((set) => set.reps > 0 || set.weight > 0);
+
+const normalizeExercise = (exercise: Exercise): Exercise => ({
+  name: exercise.name.trim(),
+  sets: getFilledSets(exercise.sets),
+});
+
 const workoutTypeConfig = {
   academia: { label: "Academia", icon: Dumbbell },
   "em-casa": { label: "Em Casa", icon: Home },
@@ -302,21 +315,33 @@ export default function WorkoutForm() {
 
   // Adicionar exercício atual à lista
   const handleAddCurrentExercise = () => {
-    if (!currentExercise.name.trim()) {
+    const exerciseToAdd = normalizeExercise(currentExercise);
+
+    if (!exerciseToAdd.name) {
       toast.error("Informe o nome do exercício");
+      return;
+    }
+
+    if (exerciseToAdd.sets.length === 0) {
+      toast.error("Informe pelo menos uma série com repetições");
+      return;
+    }
+
+    if (exerciseToAdd.sets.some((set) => set.reps <= 0)) {
+      toast.error("Cada série preenchida precisa ter pelo menos 1 repetição");
       return;
     }
 
     if (editingIndex !== null) {
       // Modo edição: atualizar exercício existente
       const updated = [...addedExercises];
-      updated[editingIndex] = currentExercise;
+      updated[editingIndex] = exerciseToAdd;
       setAddedExercises(updated);
       setEditingIndex(null);
       toast.success("Exercício atualizado!");
     } else {
       // Modo novo: adicionar à lista
-      setAddedExercises([...addedExercises, currentExercise]);
+      setAddedExercises([...addedExercises, exerciseToAdd]);
       toast.success("Exercício adicionado!");
     }
 
@@ -463,17 +488,38 @@ export default function WorkoutForm() {
       return false;
     }
 
-    if (addedExercises.length === 0) {
+    let exercisesForSave = addedExercises.map(normalizeExercise);
+
+    if (hasCurrentExerciseData) {
+      const currentExerciseForSave = normalizeExercise(currentExercise);
+
+      if (!currentExerciseForSave.name) {
+        toast.error("Complete o nome do exercício em aberto antes de salvar");
+        return false;
+      }
+
+      if (currentExerciseForSave.sets.length === 0) {
+        toast.error("Informe pelo menos uma série no exercício em aberto");
+        return false;
+      }
+
+      if (editingIndex !== null) {
+        exercisesForSave = exercisesForSave.map((exercise, index) =>
+          index === editingIndex ? currentExerciseForSave : exercise,
+        );
+      } else {
+        exercisesForSave = [...exercisesForSave, currentExerciseForSave];
+      }
+    }
+
+    if (exercisesForSave.length === 0) {
       toast.error("Adicione pelo menos um exercício");
       return false;
     }
 
-    const exercisesToSave = addedExercises.map((exercise) => ({
-      name: exercise.name.trim(),
-      sets: exercise.sets.map((set) => ({
-        reps: Number(set.reps) || 0,
-        weight: Number(set.weight) || 0,
-      })),
+    const exercisesToSave = exercisesForSave.map((exercise) => ({
+      name: exercise.name,
+      sets: exercise.sets,
     }));
 
     const invalidExercise = exercisesToSave.find(
@@ -492,7 +538,6 @@ export default function WorkoutForm() {
     setSaving(true);
     try {
       const workoutData = {
-        user_id: user.id,
         date: today.toISOString().split("T")[0],
         objective: objective.trim(),
         duration_min: durationMin,
@@ -551,15 +596,17 @@ export default function WorkoutForm() {
     return `${mins}:${String(secs).padStart(2, "0")}`;
   };
 
-  const totalSets = addedExercises.reduce((total, exercise) => total + exercise.sets.length, 0);
+  const totalSets = addedExercises.reduce((total, exercise) => total + getFilledSets(exercise.sets).length, 0);
   const totalMinutesPreview =
     (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
-  const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${addedExercises.length} exercícios)`;
+  const saveExerciseCount = addedExercises.length + (hasCurrentExerciseData && editingIndex === null ? 1 : 0);
+  const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${saveExerciseCount} exercícios)`;
+  const saveDisabled = saving || (addedExercises.length === 0 && !hasCurrentExerciseData);
 
   return (
     <div className="min-h-full overflow-x-hidden bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
-      <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 px-3 pb-36 pt-4 sm:px-4 md:px-7 md:pb-8 md:pt-7">
-      <header className="relative flex h-12 items-center justify-center md:hidden">
+      <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+8rem)] pt-2 sm:px-4 md:px-7 md:pb-8 md:pt-7">
+      <header className="sticky top-0 z-50 -mx-3 flex h-14 items-center justify-center border-b border-white/5 bg-background/90 px-3 backdrop-blur md:hidden">
         <Link
           to="/workouts"
           className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
@@ -717,6 +764,13 @@ export default function WorkoutForm() {
               ))}
             </div>
             <div className="border-t border-white/10" />
+            <Button
+              onClick={handleSaveWorkout}
+              disabled={saveDisabled}
+              className="h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:hidden"
+            >
+              {saveButtonLabel}
+            </Button>
           </div>
         )}
 
@@ -738,23 +792,34 @@ export default function WorkoutForm() {
               <Clock className="w-4 h-4 text-primary" />
               <span className="text-sm font-medium">Descanso entre séries</span>
             </div>
-            <Select
-              value={restTime.toString()}
-              onValueChange={(value) => setRestTime(Number(value))}
-              disabled={isResting}
-            >
-              <SelectTrigger className="h-10 w-[92px] rounded-xl border-white/10 bg-secondary/70 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="30">30s</SelectItem>
-                <SelectItem value="45">45s</SelectItem>
-                <SelectItem value="60">1min</SelectItem>
-                <SelectItem value="90">1:30</SelectItem>
-                <SelectItem value="120">2min</SelectItem>
-                <SelectItem value="180">3min</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex shrink-0 items-center gap-2">
+              <Select
+                value={restTime.toString()}
+                onValueChange={(value) => setRestTime(Number(value))}
+                disabled={isResting}
+              >
+                <SelectTrigger className="h-10 w-[92px] rounded-xl border-white/10 bg-secondary/70 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30s</SelectItem>
+                  <SelectItem value="45">45s</SelectItem>
+                  <SelectItem value="60">1min</SelectItem>
+                  <SelectItem value="90">1:30</SelectItem>
+                  <SelectItem value="120">2min</SelectItem>
+                  <SelectItem value="180">3min</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                onClick={startRest}
+                disabled={isResting}
+                className="h-10 rounded-xl bg-accent px-3 text-accent-foreground hover:bg-accent/90"
+              >
+                Iniciar
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -851,7 +916,7 @@ export default function WorkoutForm() {
 
         <Button
           onClick={handleSaveWorkout}
-          disabled={saving || addedExercises.length === 0}
+          disabled={saveDisabled}
           className="hidden h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:inline-flex"
         >
           {saveButtonLabel}
@@ -860,33 +925,17 @@ export default function WorkoutForm() {
         </aside>
       </div>
 
-      {/* Save Button */}
-      <Button
-        onClick={handleSaveWorkout}
-        disabled={saving || addedExercises.length === 0}
-        className="fixed inset-x-4 bottom-24 z-40 h-14 rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:hidden"
-      >
-        {saveButtonLabel}
-      </Button>
-
-      {/* Floating Timer Button - Always visible */}
-      {!showTimerOverlay && (
+      {/* Floating Timer Button */}
+      {!showTimerOverlay && isResting && (
         <button
           onClick={() => {
-            if (!isResting) {
-              startRest();
-            }
             setShowTimerOverlay(true);
           }}
-          className={`fixed bottom-44 right-4 z-50 w-16 h-16 rounded-full shadow-lg flex items-center justify-center transition-all duration-300 lg:bottom-6 ${
+          className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 lg:bottom-6 ${
             isResting ? "bg-accent animate-pulse" : "bg-card border-2 border-accent hover:scale-110"
           }`}
         >
-          {isResting ? (
-            <span className="text-sm font-bold font-mono text-accent-foreground">{formatTimerDisplay(timeLeft)}</span>
-          ) : (
-            <span className="text-3xl">🖐️</span>
-          )}
+          <span className="font-mono text-sm font-bold text-accent-foreground">{formatTimerDisplay(timeLeft)}</span>
         </button>
       )}
 
