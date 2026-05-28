@@ -19,6 +19,14 @@ const trainerProofUploadDir = path.join(env.UPLOAD_DIR, "trainer-applications");
 fs.mkdirSync(trainerProofUploadDir, { recursive: true });
 
 const allowedProofMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const defaultNotificationPreferences = {
+  updates: true,
+  reminders: true,
+  account: true,
+  wearables: true,
+  email: true,
+  whatsapp: false,
+};
 
 const trainerProofUpload = multer({
   storage: multer.diskStorage({
@@ -181,6 +189,7 @@ router.post(
                   ? data.initial_payment_method ?? null
                   : null,
               termsAcceptedAt: new Date(),
+              notificationPreferences: defaultNotificationPreferences,
               entryDate: new Date(),
             },
           },

@@ -40,6 +40,18 @@ const notificationPreferences: NotificationPreference[] = [
   { key: 'whatsapp', label: 'WhatsApp', description: 'Confirmação de consultas', icon: MessageCircle },
 ];
 
+const defaultNotificationSettings = {
+  updates: true,
+  reminders: true,
+  account: true,
+  wearables: true,
+  email: true,
+  whatsapp: false,
+};
+
+const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+const parseDecimalInput = (value: string) => Number(value.replace(',', '.'));
+
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {
   return (
     <div className="flex items-center justify-between gap-4 border-b border-white/10 py-4 last:border-b-0">
@@ -59,12 +71,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [highlightBMI, setHighlightBMI] = useState(false);
   const [notificationSettings, setNotificationSettings] = useState({
-    updates: true,
-    reminders: true,
-    account: true,
-    wearables: true,
-    email: true,
-    whatsapp: false,
+    ...defaultNotificationSettings,
   });
   const bmiFieldsRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
@@ -98,6 +105,15 @@ export default function Settings() {
     }
   }, [searchParams, profile, loading, setSearchParams]);
 
+  useEffect(() => {
+    if (!profile?.notification_preferences) return;
+
+    setNotificationSettings({
+      ...defaultNotificationSettings,
+      ...profile.notification_preferences,
+    });
+  }, [profile?.notification_preferences]);
+
   const startEditing = () => {
     if (profile) {
       setFormData({
@@ -123,7 +139,7 @@ export default function Settings() {
         phone: formData.phone.trim() || null,
         age: Number(formData.age),
         height_cm: Number(formData.height_cm),
-        weight_kg: Number(formData.weight_kg),
+        weight_kg: parseDecimalInput(formData.weight_kg),
       });
 
       if (error) throw new Error(error);
@@ -147,6 +163,31 @@ export default function Settings() {
   const handleLogout = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const handleNotificationChange = async (
+    key: NotificationPreference['key'],
+    checked: boolean,
+  ) => {
+    const nextSettings = {
+      ...notificationSettings,
+      [key]: checked,
+    };
+
+    setNotificationSettings(nextSettings);
+
+    const { error } = await updateProfile({
+      notification_preferences: nextSettings,
+    });
+
+    if (error) {
+      setNotificationSettings(notificationSettings);
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao salvar preferência',
+        description: error,
+      });
+    }
   };
 
   const initials = profile?.full_name
@@ -223,8 +264,12 @@ export default function Settings() {
               <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
+                type="text"
+                inputMode="numeric"
+                maxLength={11}
                 value={formData.phone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                onKeyDown={handleIntegerKeyDown}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: sanitizePhone(e.target.value) }))}
                 className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>
@@ -327,7 +372,7 @@ export default function Settings() {
                 </div>
                 <Switch
                   checked={notificationSettings[item.key]}
-                  onCheckedChange={(checked) => setNotificationSettings((current) => ({ ...current, [item.key]: checked }))}
+                  onCheckedChange={(checked) => void handleNotificationChange(item.key, checked)}
                   aria-label={`Ativar ${item.label}`}
                 />
               </div>

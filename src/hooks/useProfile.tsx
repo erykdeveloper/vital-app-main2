@@ -15,6 +15,7 @@ export interface Profile {
   selected_plan?: 'essential' | 'premium' | null;
   initial_payment_method?: 'pix' | 'credit_card' | null;
   terms_accepted_at?: string | null;
+  notification_preferences?: Record<string, boolean>;
   created_at: string;
   entry_date: string | null;
   avatar_url: string | null;
@@ -63,6 +64,7 @@ export function useProfile() {
         age: updates.age,
         height_cm: updates.height_cm,
         weight_kg: updates.weight_kg,
+        notification_preferences: updates.notification_preferences,
       };
       await api.patch('/profile/me', payload);
       await fetchProfile();

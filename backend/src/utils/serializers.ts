@@ -1,5 +1,14 @@
 import { AppointmentStatus, AppointmentType, UserRole, type Profile, type User } from "@prisma/client";
 
+const defaultNotificationPreferences = {
+  updates: true,
+  reminders: true,
+  account: true,
+  wearables: true,
+  email: true,
+  whatsapp: false,
+};
+
 export function serializeUser(user: User, roles: UserRole[]) {
   return {
     id: user.id,
@@ -32,6 +41,10 @@ export function serializeProfile(
     selected_plan: profile.selectedPlan,
     initial_payment_method: profile.initialPaymentMethod,
     terms_accepted_at: profile.termsAcceptedAt,
+    notification_preferences:
+      typeof profile.notificationPreferences === "object" && profile.notificationPreferences !== null
+        ? { ...defaultNotificationPreferences, ...profile.notificationPreferences }
+        : defaultNotificationPreferences,
     entry_date: profile.entryDate,
     avatar_url: profile.avatarUrl,
     created_at: profile.createdAt,

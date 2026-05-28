@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { Apple, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 const onboardingSlides = [
@@ -54,7 +53,6 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { toast } = useToast();
 
   if (loading) {
     return (
@@ -70,13 +68,6 @@ export default function Onboarding() {
 
   const showGetStarted = step >= onboardingSlides.length;
   const currentSlide = onboardingSlides[Math.min(step, onboardingSlides.length - 1)];
-
-  const handleSocialSignup = () => {
-    toast({
-      title: 'Cadastro social indisponível',
-      description: 'Crie sua conta com email para continuar.',
-    });
-  };
 
   if (showGetStarted) {
     return (
@@ -122,24 +113,6 @@ export default function Onboarding() {
               >
                 Criar conta com email
               </Button>
-              <button
-                type="button"
-                onClick={handleSocialSignup}
-                className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-              >
-                <Apple className="h-5 w-5" />
-                Criar com Apple
-              </button>
-              <button
-                type="button"
-                onClick={handleSocialSignup}
-                className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                  G
-                </span>
-                Criar com Google
-              </button>
             </div>
 
             <p className="mt-auto pb-2 pt-8 text-base text-foreground lg:mt-8">

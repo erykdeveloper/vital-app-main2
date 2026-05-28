@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Apple, BarChart3, Dumbbell, Eye, EyeOff, Heart, Lock, Mail, ShieldCheck, X } from 'lucide-react';
+import { BarChart3, Dumbbell, Eye, EyeOff, Heart, Lock, Mail, ShieldCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -116,44 +116,7 @@ export default function Login() {
             </p>
           </div>
 
-          <div className="mt-7 grid gap-3">
-            <button
-              type="button"
-              onClick={() =>
-                toast({
-                  title: 'Login social indisponível',
-                  description: 'Entre com email e senha para acessar sua conta.',
-                })
-              }
-              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-            >
-              <Apple className="h-5 w-5" />
-              Entrar com Apple
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                toast({
-                  title: 'Login social indisponível',
-                  description: 'Entre com email e senha para acessar sua conta.',
-                })
-              }
-              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                G
-              </span>
-              Entrar com Google
-            </button>
-          </div>
-
-          <div className="my-7 flex items-center gap-4 text-sm text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
-            <span>Ou entre com email</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleLogin} className="mt-7 space-y-6">
             <div className="grid gap-3">
               <div className="relative">
                 <Label htmlFor="email" className="sr-only">

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, Navigate } from 'react-router-dom';
-import { Apple, ArrowLeft, BarChart3, CheckCircle2, Eye, EyeOff, Heart, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowLeft, BarChart3, CheckCircle2, Eye, EyeOff, Heart, ShieldCheck, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -270,13 +270,6 @@ export default function Register() {
     }
   };
 
-  const handleSocialSignup = () => {
-    toast({
-      title: 'Cadastro social indisponível',
-      description: 'Crie sua conta com email para continuar.',
-    });
-  };
-
   return (
     <div className="min-h-[100svh] bg-background px-6 pb-[calc(env(safe-area-inset-bottom,0px)+8rem)] pt-[calc(env(safe-area-inset-top,0px)+1rem)] text-foreground lg:px-10 lg:pb-8 lg:pt-8">
       <div className="mx-auto grid w-full max-w-[430px] gap-8 pb-16 lg:max-w-[1180px] lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
@@ -343,33 +336,6 @@ export default function Register() {
           <p className="text-base leading-relaxed text-muted-foreground">
             Crie seu acesso para registrar treinos e acompanhar sua evolução.
           </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <button
-            type="button"
-            onClick={handleSocialSignup}
-            className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-          >
-            <Apple className="h-5 w-5" />
-            Criar com Apple
-          </button>
-          <button
-            type="button"
-            onClick={handleSocialSignup}
-            className="flex h-14 w-full items-center justify-center gap-3 rounded-xl border border-white/10 bg-card/70 px-4 text-base font-semibold shadow-elegant transition-colors hover:bg-secondary"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-              G
-            </span>
-            Criar com Google
-          </button>
-        </div>
-
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="h-px flex-1 bg-border" />
-          <span>Ou crie com email</span>
-          <span className="h-px flex-1 bg-border" />
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">

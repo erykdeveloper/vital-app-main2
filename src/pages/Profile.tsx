@@ -52,6 +52,9 @@ const supportActions: AccountAction[] = [
   { to: '/appointments', label: 'Área Médica Vital', description: 'Consultas e histórico', icon: HelpCircle },
 ];
 
+const sanitizePhone = (value: string) => value.replace(/\D/g, '').slice(0, 11);
+const parseDecimalInput = (value: string) => Number(value.replace(',', '.'));
+
 function AccountActionRow({ action }: { action: AccountAction }) {
   const Icon = action.icon;
 
@@ -201,7 +204,7 @@ export default function Profile() {
         phone: formData.phone.trim() || null,
         age: Number(formData.age),
         height_cm: Number(formData.height_cm),
-        weight_kg: Number(formData.weight_kg),
+        weight_kg: parseDecimalInput(formData.weight_kg),
       });
 
       if (error) throw new Error(error);
@@ -315,8 +318,12 @@ export default function Profile() {
               <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
+                type="text"
+                inputMode="numeric"
+                maxLength={11}
                 value={formData.phone}
-                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                onKeyDown={handleIntegerKeyDown}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: sanitizePhone(e.target.value) }))}
                 className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
               />
             </div>

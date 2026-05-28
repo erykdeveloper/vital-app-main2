@@ -152,6 +152,7 @@ model Profile {
   selectedPlan String?
   initialPaymentMethod String?
   termsAcceptedAt DateTime?
+  notificationPreferences Json?
   entryDate DateTime?
   avatarUrl String?
   createdAt DateTime  @default(now())

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Router } from "express";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 import multer from "multer";
 import { z } from "zod";
 import { env } from "../config/env.js";
@@ -24,12 +24,23 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+function normalizeOptionalPhone(value: unknown) {
+  if (typeof value !== "string") return value;
+
+  const digits = value.replace(/\D/g, "");
+  return digits || null;
+}
+
 const updateSchema = z.object({
   full_name: z.string().min(3).optional(),
-  phone: z.string().nullable().optional(),
-  age: z.number().int().positive().optional(),
-  height_cm: z.number().int().positive().optional(),
-  weight_kg: z.number().positive().optional(),
+  phone: z.preprocess(
+    normalizeOptionalPhone,
+    z.string().regex(/^\d{10,11}$/, "Telefone deve ter 10 ou 11 numeros com DDD").optional().nullable(),
+  ),
+  age: z.coerce.number().int().positive().optional(),
+  height_cm: z.coerce.number().int().positive().optional(),
+  weight_kg: z.coerce.number().positive().optional(),
+  notification_preferences: z.record(z.boolean()).optional(),
 });
 
 router.get(
@@ -73,6 +84,7 @@ router.patch(
         age: data.age,
         heightCm: data.height_cm,
         weightKg: data.weight_kg?.toString(),
+        notificationPreferences: data.notification_preferences as Prisma.InputJsonValue | undefined,
       },
     });
 
