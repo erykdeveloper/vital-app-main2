@@ -140,7 +140,7 @@ export default function WorkoutForm() {
     date: string;
   } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveFeedback, setSaveFeedback] = useState<{ type: "info" | "success" | "error"; message: string } | null>(null);
 
   // Detectar se há dados não salvos
   const hasCurrentExerciseData = !!(
@@ -479,22 +479,16 @@ export default function WorkoutForm() {
   };
 
   const handleSaveWorkout = async () => {
-    setSaveError(null);
+    setSaveFeedback({ type: "info", message: "Enviando treino para o banco de dados..." });
 
     if (!user) {
       const message = "Você precisa estar logado novamente para salvar o treino";
-      setSaveError(message);
+      setSaveFeedback({ type: "error", message });
       toast.error(message);
       return false;
     }
 
-    if (!objective.trim()) {
-      const message = "Informe o tipo de treino";
-      setSaveError(message);
-      toast.error(message);
-      return false;
-    }
-
+    const workoutObjective = objective.trim() || config.label;
     let exercisesForSave = addedExercises.map(normalizeExercise);
 
     if (hasCurrentExerciseData) {
@@ -512,7 +506,7 @@ export default function WorkoutForm() {
         exercisesForSave = [...exercisesForSave, currentExerciseForSave];
       } else if (addedExercises.length === 0) {
         const message = "Complete o exercício em aberto antes de salvar";
-        setSaveError(message);
+        setSaveFeedback({ type: "error", message });
         toast.error(message);
         return false;
       }
@@ -520,7 +514,7 @@ export default function WorkoutForm() {
 
     if (exercisesForSave.length === 0) {
       const message = "Adicione pelo menos um exercício";
-      setSaveError(message);
+      setSaveFeedback({ type: "error", message });
       toast.error(message);
       return false;
     }
@@ -536,7 +530,7 @@ export default function WorkoutForm() {
 
     if (invalidExercise) {
       const message = "Revise os exercícios: cada série precisa ter pelo menos 1 repetição.";
-      setSaveError(message);
+      setSaveFeedback({ type: "error", message });
       toast.error(message);
       return false;
     }
@@ -549,7 +543,7 @@ export default function WorkoutForm() {
     try {
       const workoutData = {
         date: today.toISOString().split("T")[0],
-        objective: objective.trim(),
+        objective: workoutObjective,
         duration_min: durationMin,
         calories: calories || null,
         exercises: exercisesToSave as unknown,
@@ -559,6 +553,7 @@ export default function WorkoutForm() {
       await api.post('/workouts/strength', workoutData);
 
       toast.success("Treino salvo com sucesso!");
+      setSaveFeedback({ type: "success", message: "Treino salvo no banco de dados do usuário logado." });
       clearDraft();
       setObjective("");
       setAddedExercises([]);
@@ -568,7 +563,6 @@ export default function WorkoutForm() {
       setDurationMin("");
       setDurationSec("");
       setCalories("");
-      setSaveError(null);
       return true;
     } catch (error: any) {
       const message = error.message || '';
@@ -582,7 +576,7 @@ export default function WorkoutForm() {
       } else {
         userMessage = `Erro ao salvar treino: ${message || 'tente novamente em alguns instantes'}`;
       }
-      setSaveError(userMessage);
+      setSaveFeedback({ type: "error", message: userMessage });
       toast.error(userMessage);
       return false;
     } finally {
@@ -616,6 +610,12 @@ export default function WorkoutForm() {
   const saveExerciseCount = addedExercises.length + (hasCurrentExerciseData && editingIndex === null ? 1 : 0);
   const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${saveExerciseCount} exercícios)`;
   const saveDisabled = saving || (addedExercises.length === 0 && !hasCurrentExerciseData);
+  const saveFeedbackClassName =
+    saveFeedback?.type === "success"
+      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+      : saveFeedback?.type === "info"
+        ? "border-primary/30 bg-primary/10 text-primary"
+        : "border-destructive/30 bg-destructive/10 text-destructive";
 
   return (
     <div className="min-h-full overflow-x-hidden bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
