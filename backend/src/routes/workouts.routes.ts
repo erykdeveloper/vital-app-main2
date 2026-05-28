@@ -83,6 +83,7 @@ router.post(
   "/strength",
   requireAuth,
   asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const startedAt = Date.now();
     const data = workoutSchema.parse(req.body);
     const workout = await prisma.workout.create({
       data: {
@@ -96,9 +97,14 @@ router.post(
       },
     });
 
-    await awardFirstWorkoutAchievementIfNeeded(req.auth!.userId);
+    const response = res.status(201).json({ workout });
 
-    return res.status(201).json({ workout });
+    console.info(`[workouts] strength saved id=${workout.id} in ${Date.now() - startedAt}ms`);
+    setImmediate(() => void awardFirstWorkoutAchievementIfNeeded(req.auth!.userId).catch((error) => {
+      console.error("[workouts] failed to award first workout achievement", error);
+    }));
+
+    return response;
   }),
 );
 
@@ -181,6 +187,7 @@ router.post(
   "/cardio",
   requireAuth,
   asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const startedAt = Date.now();
     const data = cardioSchema.parse(req.body);
     const cardioWorkout = await prisma.cardioWorkout.create({
       data: {
@@ -196,9 +203,14 @@ router.post(
       },
     });
 
-    await awardFirstWorkoutAchievementIfNeeded(req.auth!.userId);
+    const response = res.status(201).json({ cardio_workout: cardioWorkout });
 
-    return res.status(201).json({ cardio_workout: cardioWorkout });
+    console.info(`[workouts] cardio saved id=${cardioWorkout.id} in ${Date.now() - startedAt}ms`);
+    setImmediate(() => void awardFirstWorkoutAchievementIfNeeded(req.auth!.userId).catch((error) => {
+      console.error("[workouts] failed to award first workout achievement", error);
+    }));
+
+    return response;
   }),
 );
 

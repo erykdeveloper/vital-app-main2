@@ -480,7 +480,7 @@ export default function WorkoutForm() {
   };
 
   const handleSaveWorkout = async () => {
-    setSaveFeedback({ type: "info", message: "Enviando treino para o banco de dados..." });
+    setSaveFeedback(null);
 
     if (!user) {
       const message = "Você precisa estar logado novamente para salvar o treino";
@@ -551,10 +551,13 @@ export default function WorkoutForm() {
         workout_type: type,
       };
 
-      await api.post('/workouts/strength', workoutData);
+      const response = await api.post<{ workout?: { id?: string } }>('/workouts/strength', workoutData);
+      if (!response.workout?.id) {
+        throw new Error("A API nao confirmou o treino salvo");
+      }
 
       toast.success("Treino salvo com sucesso!");
-      setSaveFeedback({ type: "success", message: "Treino salvo no banco de dados do usuário logado." });
+      setSaveFeedback({ type: "success", message: "Treino salvo com sucesso." });
       clearDraft();
       setObjective("");
       setAddedExercises([]);
@@ -569,13 +572,15 @@ export default function WorkoutForm() {
       const message = error.message || '';
       let userMessage = '';
       
-      if (message.includes('Load Failed') || 
+      if (error?.name === 'AbortError') {
+        userMessage = 'O salvamento demorou demais para responder. Verifique sua conexão e tente novamente.';
+      } else if (message.includes('Load Failed') || 
           message.includes('NetworkError') ||
           message.includes('fetch') ||
           message.includes('network')) {
-        userMessage = 'Erro de conexão. Seus dados estão salvos localmente. Tente novamente.';
+        userMessage = 'Erro de conexão. O rascunho ficou salvo no aparelho. Tente novamente.';
       } else {
-        userMessage = `Erro ao salvar treino: ${message || 'tente novamente em alguns instantes'}`;
+        userMessage = `Não foi possível salvar o treino: ${message || 'tente novamente em alguns instantes'}`;
       }
       setSaveFeedback({ type: "error", message: userMessage });
       toast.error(userMessage);

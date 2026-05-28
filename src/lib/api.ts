@@ -50,6 +50,9 @@ export class ApiError extends Error {
 async function request<T>(path: string, init: RequestInit = {}, useAuth = true): Promise<T> {
   const headers = new Headers(init.headers);
   const isFormData = init.body instanceof FormData;
+  const timeoutMs = isFormData ? 60000 : 20000;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
 
   if (!isFormData) {
     headers.set('Content-Type', 'application/json');
@@ -62,22 +65,27 @@ async function request<T>(path: string, init: RequestInit = {}, useAuth = true):
     }
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers,
+      signal: init.signal ?? controller.signal,
+    });
 
-  if (response.status === 204) {
-    return undefined as T;
+    if (response.status === 204) {
+      return undefined as T;
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new ApiError(data.message || 'Erro ao comunicar com a API', response.status);
+    }
+
+    return data as T;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new ApiError(data.message || 'Erro ao comunicar com a API', response.status);
-  }
-
-  return data as T;
 }
 
 export const api = {
