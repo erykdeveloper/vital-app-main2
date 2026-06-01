@@ -15,15 +15,35 @@ const uploadDir = path.resolve(env.UPLOAD_DIR, "body-progress");
 
 fs.mkdirSync(uploadDir, { recursive: true });
 
+const imageExtensions: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+const allowedImageTypes = new Set(Object.keys(imageExtensions));
+
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, uploadDir),
   filename: (req: AuthenticatedRequest, file, callback) => {
-    const ext = path.extname(file.originalname) || ".jpg";
+    const ext = (imageExtensions[file.mimetype] ?? path.extname(file.originalname)) || ".jpg";
     callback(null, `${req.auth!.userId}-${Date.now()}${ext}`);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 8 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedImageTypes.has(file.mimetype)) {
+      callback(new Error("Tipo de arquivo nao permitido"));
+      return;
+    }
+
+    callback(null, true);
+  },
+});
 
 const createSchema = z.object({
   pose: z.nativeEnum(BodyProgressPhotoPose),
@@ -54,6 +74,14 @@ function serializePhoto(photo: {
   };
 }
 
+function removeUploadedFile(file: Express.Multer.File | undefined) {
+  if (!file) return;
+
+  if (fs.existsSync(file.path)) {
+    fs.unlinkSync(file.path);
+  }
+}
+
 router.get(
   "/photos",
   requireAuth,
@@ -76,17 +104,29 @@ router.post(
       return res.status(400).json({ message: "Arquivo nao enviado" });
     }
 
-    const data = createSchema.parse(req.body);
-    const photo = await prisma.bodyProgressPhoto.create({
-      data: {
-        userId: req.auth!.userId,
-        imageUrl: `/uploads/body-progress/${req.file.filename}`,
-        pose: data.pose,
-        label: data.label ?? null,
-        notes: data.notes ?? null,
-        takenAt: new Date(data.taken_at),
-      },
-    });
+    let data: z.infer<typeof createSchema>;
+    try {
+      data = createSchema.parse(req.body);
+    } catch (error) {
+      removeUploadedFile(req.file);
+      throw error;
+    }
+
+    const photo = await prisma.bodyProgressPhoto
+      .create({
+        data: {
+          userId: req.auth!.userId,
+          imageUrl: `/uploads/body-progress/${req.file.filename}`,
+          pose: data.pose,
+          label: data.label ?? null,
+          notes: data.notes ?? null,
+          takenAt: new Date(data.taken_at),
+        },
+      })
+      .catch((error: unknown) => {
+        removeUploadedFile(req.file);
+        throw error;
+      });
 
     return res.status(201).json({ photo: serializePhoto(photo) });
   }),

@@ -14,15 +14,35 @@ const router = Router();
 
 fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
 
+const imageExtensions: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+const allowedImageTypes = new Set(Object.keys(imageExtensions));
+
 const storage = multer.diskStorage({
   destination: (_req, _file, callback) => callback(null, env.UPLOAD_DIR),
   filename: (req: AuthenticatedRequest, file, callback) => {
-    const ext = path.extname(file.originalname) || ".jpg";
+    const ext = (imageExtensions[file.mimetype] ?? path.extname(file.originalname)) || ".jpg";
     callback(null, `${req.auth!.userId}-avatar${ext}`);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    if (!allowedImageTypes.has(file.mimetype)) {
+      callback(new Error("Tipo de arquivo nao permitido"));
+      return;
+    }
+
+    callback(null, true);
+  },
+});
 
 function normalizeOptionalPhone(value: unknown) {
   if (typeof value !== "string") return value;
@@ -107,10 +127,30 @@ router.post(
     }
 
     const avatarUrl = `/uploads/${req.file.filename}`;
-    const profile = await prisma.profile.update({
+    const currentProfile = await prisma.profile.findUnique({
       where: { userId: req.auth!.userId },
-      data: { avatarUrl },
+      select: { avatarUrl: true },
     });
+    const previousAvatarPath = currentProfile?.avatarUrl
+      ? path.resolve(env.UPLOAD_DIR, path.basename(currentProfile.avatarUrl))
+      : null;
+
+    const profile = await prisma.profile
+      .update({
+        where: { userId: req.auth!.userId },
+        data: { avatarUrl },
+      })
+      .catch((error: unknown) => {
+        if (previousAvatarPath !== req.file?.path && fs.existsSync(req.file!.path)) {
+          fs.unlinkSync(req.file!.path);
+        }
+
+        throw error;
+      });
+
+    if (previousAvatarPath && previousAvatarPath !== req.file.path && fs.existsSync(previousAvatarPath)) {
+      fs.unlinkSync(previousAvatarPath);
+    }
 
     return res.json({
       profile: serializeProfile(profile, req.auth!.email, {

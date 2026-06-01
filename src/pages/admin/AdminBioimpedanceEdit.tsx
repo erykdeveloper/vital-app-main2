@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useBioimpedanceRecord, useUpdateBioimpedance, useDeleteBioimpedance } from '@/hooks/useAdmin';
+import { parseLocaleInteger, parseLocaleNumber } from '@/lib/inputValidation';
 import { toast } from '@/hooks/use-toast';
 
 interface FormData {
@@ -128,12 +129,6 @@ export default function AdminBioimpedanceEdit() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const parseNumber = (value: string): number | null => {
-    if (!value || value.trim() === '') return null;
-    const num = parseFloat(value);
-    return isNaN(num) ? null : num;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -142,35 +137,35 @@ export default function AdminBioimpedanceEdit() {
     const updates = {
       id,
       date: formData.date,
-      weight_kg: parseNumber(formData.weight_kg),
-      body_fat_percent: parseNumber(formData.body_fat_percent),
-      muscle_percent: parseNumber(formData.muscle_percent),
-      water_percent: parseNumber(formData.water_percent),
-      visceral_fat: parseNumber(formData.visceral_fat),
-      subcutaneous_fat_percent: parseNumber(formData.subcutaneous_fat_percent),
-      fat_free_mass_kg: parseNumber(formData.fat_free_mass_kg),
-      protein_percent: parseNumber(formData.protein_percent),
-      bone_mass_kg: parseNumber(formData.bone_mass_kg),
-      muscle_mass_kg: parseNumber(formData.muscle_mass_kg),
-      bmi: parseNumber(formData.bmi),
-      fat_weight_kg: parseNumber(formData.fat_weight_kg),
-      waist_hip_ratio: parseNumber(formData.waist_hip_ratio),
-      bmr_kcal: parseNumber(formData.bmr_kcal),
-      ideal_weight_kg: parseNumber(formData.ideal_weight_kg),
-      weight_control_tip: parseNumber(formData.weight_control_tip),
-      fat_control_tip: parseNumber(formData.fat_control_tip),
-      muscle_control_tip: parseNumber(formData.muscle_control_tip),
-      daily_calories: parseNumber(formData.daily_calories),
-      waist_cm: parseNumber(formData.waist_cm),
-      hip_cm: parseNumber(formData.hip_cm),
-      arm_cm: parseNumber(formData.arm_cm),
-      thigh_cm: parseNumber(formData.thigh_cm),
-      shoulder_imbalance_cm: parseNumber(formData.shoulder_imbalance_cm),
-      spine_curvature_cm: parseNumber(formData.spine_curvature_cm),
-      head_tilt_degrees: parseNumber(formData.head_tilt_degrees),
-      trunk_curvature_degrees: parseNumber(formData.trunk_curvature_degrees),
-      pelvis_tilt_degrees: parseNumber(formData.pelvis_tilt_degrees),
-      head_forward_degrees: parseNumber(formData.head_forward_degrees),
+      weight_kg: parseLocaleNumber(formData.weight_kg),
+      body_fat_percent: parseLocaleNumber(formData.body_fat_percent),
+      muscle_percent: parseLocaleNumber(formData.muscle_percent),
+      water_percent: parseLocaleNumber(formData.water_percent),
+      visceral_fat: parseLocaleNumber(formData.visceral_fat),
+      subcutaneous_fat_percent: parseLocaleNumber(formData.subcutaneous_fat_percent),
+      fat_free_mass_kg: parseLocaleNumber(formData.fat_free_mass_kg),
+      protein_percent: parseLocaleNumber(formData.protein_percent),
+      bone_mass_kg: parseLocaleNumber(formData.bone_mass_kg),
+      muscle_mass_kg: parseLocaleNumber(formData.muscle_mass_kg),
+      bmi: parseLocaleNumber(formData.bmi),
+      fat_weight_kg: parseLocaleNumber(formData.fat_weight_kg),
+      waist_hip_ratio: parseLocaleNumber(formData.waist_hip_ratio),
+      bmr_kcal: parseLocaleInteger(formData.bmr_kcal),
+      ideal_weight_kg: parseLocaleNumber(formData.ideal_weight_kg),
+      weight_control_tip: parseLocaleNumber(formData.weight_control_tip),
+      fat_control_tip: parseLocaleNumber(formData.fat_control_tip),
+      muscle_control_tip: parseLocaleNumber(formData.muscle_control_tip),
+      daily_calories: parseLocaleInteger(formData.daily_calories),
+      waist_cm: parseLocaleNumber(formData.waist_cm),
+      hip_cm: parseLocaleNumber(formData.hip_cm),
+      arm_cm: parseLocaleNumber(formData.arm_cm),
+      thigh_cm: parseLocaleNumber(formData.thigh_cm),
+      shoulder_imbalance_cm: parseLocaleNumber(formData.shoulder_imbalance_cm),
+      spine_curvature_cm: parseLocaleNumber(formData.spine_curvature_cm),
+      head_tilt_degrees: parseLocaleNumber(formData.head_tilt_degrees),
+      trunk_curvature_degrees: parseLocaleNumber(formData.trunk_curvature_degrees),
+      pelvis_tilt_degrees: parseLocaleNumber(formData.pelvis_tilt_degrees),
+      head_forward_degrees: parseLocaleNumber(formData.head_forward_degrees),
       notes: formData.notes || null,
     };
 

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, User, Phone } from 'lucide-react';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -15,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { formatDateSafe } from '@/lib/dateUtils';
+import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
 import {
   Select,
   SelectContent,
@@ -61,8 +60,10 @@ export default function AdminAppointments() {
   const [formNotes, setFormNotes] = useState('');
 
   const openEditDialog = (appointment: Appointment) => {
+    const scheduledDate = parseDateValue(appointment.scheduled_date, { noon: true });
+
     setEditingAppointment(appointment);
-    setFormDate(appointment.scheduled_date ? new Date(appointment.scheduled_date) : undefined);
+    setFormDate(scheduledDate ?? undefined);
     setFormTime(appointment.scheduled_time?.slice(0, 5) || '');
     setFormStatus(appointment.status);
     setFormNotes(appointment.admin_notes || '');
@@ -74,7 +75,7 @@ export default function AdminAppointments() {
     try {
       await updateAppointment.mutateAsync({
         id: editingAppointment.id,
-        scheduled_date: formDate ? format(formDate, 'yyyy-MM-dd') : null,
+        scheduled_date: formDate ? formatDateSafe(formDate, 'yyyy-MM-dd', { fallback: '' }) || null : null,
         scheduled_time: formTime || null,
         status: formStatus,
         admin_notes: formNotes || null,
@@ -263,7 +264,9 @@ export default function AdminAppointments() {
                     )}
                   >
                     <Calendar className="mr-2 h-4 w-4" />
-                    {formDate ? format(formDate, 'PPP', { locale: ptBR }) : 'Selecionar data'}
+                    {formDate
+                      ? formatDateSafe(formDate, 'PPP', { locale: ptBR, fallback: 'Data invalida' })
+                      : 'Selecionar data'}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">

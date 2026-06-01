@@ -18,7 +18,13 @@ const router = Router();
 const trainerProofUploadDir = path.join(env.UPLOAD_DIR, "trainer-applications");
 fs.mkdirSync(trainerProofUploadDir, { recursive: true });
 
-const allowedProofMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const proofImageExtensions: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
+
+const allowedProofMimeTypes = new Set(Object.keys(proofImageExtensions));
 const defaultNotificationPreferences = {
   updates: true,
   reminders: true,
@@ -32,7 +38,7 @@ const trainerProofUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, callback) => callback(null, trainerProofUploadDir),
     filename: (_req, file, callback) => {
-      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+      const ext = proofImageExtensions[file.mimetype] ?? ".jpg";
       callback(null, `${crypto.randomUUID()}${ext}`);
     },
   }),
@@ -48,6 +54,23 @@ const trainerProofUpload = multer({
     callback(null, true);
   },
 });
+
+type TrainerProofFiles =
+  | {
+      self_photo?: Express.Multer.File[];
+      document_photo?: Express.Multer.File[];
+    }
+  | undefined;
+
+function removeTrainerProofFiles(files: TrainerProofFiles) {
+  for (const fileList of Object.values(files ?? {})) {
+    for (const file of fileList ?? []) {
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
+    }
+  }
+}
 
 function parseMaybeJson(value: unknown) {
   if (typeof value !== "string") return value;
@@ -147,17 +170,21 @@ router.post(
     { name: "document_photo", maxCount: 1 },
   ]),
   asyncHandler(async (req, res) => {
-    const data = registerSchema.parse(req.body);
-    const files = req.files as
-      | {
-          self_photo?: Express.Multer.File[];
-          document_photo?: Express.Multer.File[];
-        }
-      | undefined;
+    const files = req.files as TrainerProofFiles;
+    let data: z.infer<typeof registerSchema>;
+
+    try {
+      data = registerSchema.parse(req.body);
+    } catch (error) {
+      removeTrainerProofFiles(files);
+      throw error;
+    }
+
     const selfPhoto = files?.self_photo?.[0] ?? null;
     const documentPhoto = files?.document_photo?.[0] ?? null;
 
     if (data.account_type === "personal" && (!selfPhoto || !documentPhoto)) {
+      removeTrainerProofFiles(files);
       return res.status(400).json({ message: "Envie sua foto e a foto do documento para validar o personal" });
     }
 
@@ -166,57 +193,63 @@ router.post(
     });
 
     if (existing) {
+      removeTrainerProofFiles(files);
       return res.status(409).json({ message: "Email ja cadastrado" });
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
-    const user = await prisma.$transaction(async (tx) => {
-      return tx.user.create({
-        data: {
-          email: data.email.toLowerCase(),
-          passwordHash,
-          profile: {
-            create: {
-              fullName: data.full_name,
-              phone: data.phone || null,
-              age: data.age,
-              heightCm: data.height_cm,
-              weightKg: data.weight_kg.toString(),
-              accountType: data.account_type,
-              selectedPlan: data.account_type === "client" ? data.selected_plan : null,
-              initialPaymentMethod:
-                data.account_type === "client" && data.selected_plan === "premium"
-                  ? data.initial_payment_method ?? null
-                  : null,
-              termsAcceptedAt: new Date(),
-              notificationPreferences: defaultNotificationPreferences,
-              entryDate: new Date(),
+    const user = await prisma
+      .$transaction(async (tx) => {
+        return tx.user.create({
+          data: {
+            email: data.email.toLowerCase(),
+            passwordHash,
+            profile: {
+              create: {
+                fullName: data.full_name,
+                phone: data.phone || null,
+                age: data.age,
+                heightCm: data.height_cm,
+                weightKg: data.weight_kg.toString(),
+                accountType: data.account_type,
+                selectedPlan: data.account_type === "client" ? data.selected_plan : null,
+                initialPaymentMethod:
+                  data.account_type === "client" && data.selected_plan === "premium"
+                    ? data.initial_payment_method ?? null
+                    : null,
+                termsAcceptedAt: new Date(),
+                notificationPreferences: defaultNotificationPreferences,
+                entryDate: new Date(),
+              },
             },
+            trainerApplication:
+              data.account_type === "personal"
+                ? {
+                    create: {
+                      fullName: data.full_name,
+                      cref: data.trainer_application?.cref ?? "",
+                      crefState: data.trainer_application?.cref_state ?? "",
+                      specialties: data.trainer_application?.specialties ?? null,
+                      experienceYears: data.trainer_application?.experience_years ?? null,
+                      instagramHandle: data.trainer_application?.instagram_handle ?? null,
+                      proofNotes: data.trainer_application?.proof_notes ?? null,
+                      selfPhotoUrl: selfPhoto ? `/uploads/trainer-applications/${selfPhoto.filename}` : null,
+                      documentPhotoUrl: documentPhoto ? `/uploads/trainer-applications/${documentPhoto.filename}` : null,
+                    },
+                  }
+                : undefined,
           },
-          trainerApplication:
-            data.account_type === "personal"
-              ? {
-                  create: {
-                    fullName: data.full_name,
-                    cref: data.trainer_application?.cref ?? "",
-                    crefState: data.trainer_application?.cref_state ?? "",
-                    specialties: data.trainer_application?.specialties ?? null,
-                    experienceYears: data.trainer_application?.experience_years ?? null,
-                    instagramHandle: data.trainer_application?.instagram_handle ?? null,
-                    proofNotes: data.trainer_application?.proof_notes ?? null,
-                    selfPhotoUrl: selfPhoto ? `/uploads/trainer-applications/${selfPhoto.filename}` : null,
-                    documentPhotoUrl: documentPhoto ? `/uploads/trainer-applications/${documentPhoto.filename}` : null,
-                  },
-                }
-              : undefined,
-        },
-        include: {
-          profile: true,
-          roles: true,
-          trainerApplication: true,
-        },
+          include: {
+            profile: true,
+            roles: true,
+            trainerApplication: true,
+          },
+        });
+      })
+      .catch((error: unknown) => {
+        removeTrainerProofFiles(files);
+        throw error;
       });
-    });
 
     const token = signToken({
       sub: user.id,

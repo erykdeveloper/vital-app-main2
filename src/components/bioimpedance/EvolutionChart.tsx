@@ -62,6 +62,7 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
         {METRICS.map((metric) => (
           <button
             key={metric.key}
+            type="button"
             onClick={() => setSelectedMetric(metric.key)}
             className={`px-3 py-1.5 text-sm rounded-full transition-colors ${
               selectedMetric === metric.key

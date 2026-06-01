@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './useAuth';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { fetchCardioWorkouts, fetchStrengthWorkouts } from '@/lib/workoutApi';
@@ -23,29 +23,34 @@ export function useWeeklyProgress(): WeeklyProgress {
 
     const fetchWeeklyWorkouts = async () => {
       setLoading(true);
-      
-      // Get start and end of current week (Sunday to Saturday)
-      const now = new Date();
-      const weekStart = startOfWeek(now, { weekStartsOn: 0 });
-      const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
-      
-      const startDate = format(weekStart, 'yyyy-MM-dd');
-      const endDate = format(weekEnd, 'yyyy-MM-dd');
 
-      const [workouts, cardioWorkouts] = await Promise.all([
-        fetchStrengthWorkouts(),
-        fetchCardioWorkouts(),
-      ]);
+      try {
+        // Get start and end of current week (Sunday to Saturday)
+        const now = new Date();
+        const weekStart = startOfWeek(now, { weekStartsOn: 0 });
+        const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
 
-      // Combine and get unique dates
-      const allDates = [
-        ...(workouts || []).map(w => w.date),
-        ...(cardioWorkouts || []).map(w => w.date),
-      ].filter((date) => date >= startDate && date <= endDate);
-      
-      const uniqueDates = [...new Set(allDates)];
-      setWorkoutDates(uniqueDates);
-      setLoading(false);
+        const startDate = format(weekStart, 'yyyy-MM-dd');
+        const endDate = format(weekEnd, 'yyyy-MM-dd');
+
+        const [workouts, cardioWorkouts] = await Promise.all([
+          fetchStrengthWorkouts(),
+          fetchCardioWorkouts(),
+        ]);
+
+        // Combine and get unique dates
+        const allDates = [
+          ...(workouts || []).map(w => w.date),
+          ...(cardioWorkouts || []).map(w => w.date),
+        ].filter((date) => date >= startDate && date <= endDate);
+
+        const uniqueDates = [...new Set(allDates)];
+        setWorkoutDates(uniqueDates);
+      } catch {
+        setWorkoutDates([]);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchWeeklyWorkouts();

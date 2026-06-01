@@ -1,12 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { toDateOnlyString } from '@/lib/dateUtils';
 import { useAuth } from './useAuth';
 
 function mapBioimpedanceRecord(record: any) {
   return {
     id: record.id,
     user_id: record.userId,
-    date: record.date,
+    date: toDateOnlyString(record.date),
     created_at: record.createdAt,
     weight_kg: record.weightKg ? Number(record.weightKg) : null,
     body_fat_percent: record.bodyFatPercent ? Number(record.bodyFatPercent) : null,

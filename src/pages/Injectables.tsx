@@ -29,7 +29,7 @@ import { PremiumPreviewGate } from '@/components/PremiumPreviewGate';
 import { toast } from 'sonner';
 import { ptBR } from 'date-fns/locale';
 import { InjectablesAnalytics } from '@/components/injectables/InjectablesAnalytics';
-import { formatDateSafe } from '@/lib/dateUtils';
+import { formatDateSafe, toDateOnlyString } from '@/lib/dateUtils';
 
 const locationLabels: Record<string, string> = {
   abdomen: 'Abdômen',
@@ -99,7 +99,10 @@ export default function Injectables() {
     queryKey: ['injectables'],
     queryFn: async () => {
       const response = await api.get<{ injectables: Injectable[] }>('/injectables');
-      return response.injectables;
+      return response.injectables.map((injectable) => ({
+        ...injectable,
+        date: toDateOnlyString(injectable.date),
+      }));
     },
     enabled: Boolean(profile?.is_premium),
   });
@@ -154,7 +157,7 @@ export default function Injectables() {
   const openEditModal = (injectable: Injectable) => {
     setEditMedication(injectable.medication);
     setEditDose(injectable.dose);
-    setEditDate(injectable.date);
+    setEditDate(toDateOnlyString(injectable.date));
     setEditTime(injectable.time);
     setEditLocation(injectable.location);
     setEditNotes(injectable.notes || '');

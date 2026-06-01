@@ -976,6 +976,7 @@ export default function WorkoutForm() {
       {/* Floating Timer Button */}
       {!showTimerOverlay && isResting && (
         <button
+          type="button"
           onClick={() => {
             setShowTimerOverlay(true);
           }}
@@ -992,6 +993,7 @@ export default function WorkoutForm() {
         <div className="fixed inset-0 bg-background/95 z-[100] flex flex-col items-center justify-center">
           <p className="text-muted-foreground mb-6 text-lg">Descansando...</p>
           <button
+            type="button"
             onClick={stopRest}
             className={`w-52 h-52 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
               timeLeft <= 3 ? "bg-destructive animate-pulse shadow-destructive/50" : "bg-accent shadow-accent/30"

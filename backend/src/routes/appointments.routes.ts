@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { Appointment, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
 import { requireAdmin, requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
@@ -19,11 +20,49 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
-  scheduled_date: z.string().nullable().optional(),
+  scheduled_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   scheduled_time: z.string().nullable().optional(),
   status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
   admin_notes: z.string().nullable().optional(),
 });
+
+type AppointmentProfile = {
+  fullName: string;
+  email: string;
+  phone: string | null;
+} | null;
+
+function parseScheduledDate(value: string) {
+  return new Date(`${value}T12:00:00.000Z`);
+}
+
+function serializeAppointment(item: Appointment, profile?: AppointmentProfile) {
+  const appointment = {
+    id: item.id,
+    user_id: item.userId,
+    type: parseAppointmentType(item.type),
+    status: parseAppointmentStatus(item.status),
+    scheduled_date: item.scheduledDate,
+    scheduled_time: item.scheduledTime,
+    admin_notes: item.adminNotes,
+    created_at: item.createdAt,
+  };
+
+  if (profile === undefined) {
+    return appointment;
+  }
+
+  return {
+    ...appointment,
+    profiles: profile
+      ? {
+          full_name: profile.fullName,
+          email: profile.email,
+          phone: profile.phone,
+        }
+      : null,
+  };
+}
 
 router.get(
   "/mine",
@@ -35,11 +74,7 @@ router.get(
     });
 
     return res.json({
-      appointments: appointments.map((item) => ({
-        ...item,
-        type: parseAppointmentType(item.type),
-        status: parseAppointmentStatus(item.status),
-      })),
+      appointments: appointments.map((item) => serializeAppointment(item)),
     });
   }),
 );
@@ -57,11 +92,7 @@ router.post(
     });
 
     return res.status(201).json({
-      appointment: {
-        ...appointment,
-        type: parseAppointmentType(appointment.type),
-        status: parseAppointmentStatus(appointment.status),
-      },
+      appointment: serializeAppointment(appointment),
     });
   }),
 );
@@ -107,23 +138,18 @@ router.get(
     });
 
     return res.json({
-      appointments: appointments.map((item) => ({
-        id: item.id,
-        user_id: item.userId,
-        type: parseAppointmentType(item.type),
-        status: parseAppointmentStatus(item.status),
-        scheduled_date: item.scheduledDate,
-        scheduled_time: item.scheduledTime,
-        admin_notes: item.adminNotes,
-        created_at: item.createdAt,
-        profiles: item.user.profile
-          ? {
-              full_name: item.user.profile.fullName,
-              email: item.user.email,
-              phone: item.user.profile.phone,
-            }
-          : null,
-      })),
+      appointments: appointments.map((item) =>
+        serializeAppointment(
+          item,
+          item.user.profile
+            ? {
+                fullName: item.user.profile.fullName,
+                email: item.user.email,
+                phone: item.user.profile.phone,
+              }
+            : null,
+        ),
+      ),
     });
   }),
 );
@@ -135,14 +161,27 @@ router.patch(
   asyncHandler(async (req: AuthenticatedRequest, res) => {
     const appointmentId = getRouteParam(req.params.id, "id");
     const data = updateSchema.parse(req.body);
+    const updateData: Prisma.AppointmentUpdateInput = {};
+
+    if (data.scheduled_date !== undefined) {
+      updateData.scheduledDate = data.scheduled_date ? parseScheduledDate(data.scheduled_date) : null;
+    }
+
+    if (data.scheduled_time !== undefined) {
+      updateData.scheduledTime = data.scheduled_time;
+    }
+
+    if (data.status !== undefined) {
+      updateData.status = serializeAppointmentStatus(data.status);
+    }
+
+    if (data.admin_notes !== undefined) {
+      updateData.adminNotes = data.admin_notes;
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id: appointmentId },
-      data: {
-        scheduledDate: data.scheduled_date ? new Date(data.scheduled_date) : null,
-        scheduledTime: data.scheduled_time ?? null,
-        status: data.status ? serializeAppointmentStatus(data.status) : undefined,
-        adminNotes: data.admin_notes ?? null,
-      },
+      data: updateData,
     });
 
     await logAudit({
@@ -155,11 +194,7 @@ router.patch(
     });
 
     return res.json({
-      appointment: {
-        ...appointment,
-        type: parseAppointmentType(appointment.type),
-        status: parseAppointmentStatus(appointment.status),
-      },
+      appointment: serializeAppointment(appointment),
     });
   }),
 );

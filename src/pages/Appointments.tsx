@@ -15,7 +15,7 @@ import {
   Video,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useMyAppointments, useCreateAppointment, useDeleteAppointment } from '@/hooks/useAppointments';
+import { useMyAppointments, useCreateAppointment, useDeleteAppointment, type Appointment } from '@/hooks/useAppointments';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
+import { formatDateSafe } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 
 const typeLabels: Record<string, string> = {
@@ -134,20 +135,16 @@ export default function Appointments() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    return formatDateSafe(dateString, 'dd/MM/yyyy', {
+      fallback: 'Data indisponivel',
     });
   };
 
-  const formatScheduledInfo = (appointment: any) => {
+  const formatScheduledInfo = (appointment: Appointment) => {
     if (appointment.scheduled_date && appointment.scheduled_time) {
-      const date = new Date(appointment.scheduled_date);
-      const formattedDate = date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
+      const formattedDate = formatDateSafe(appointment.scheduled_date, 'dd/MM', {
+        noon: true,
+        fallback: 'Data indisponivel',
       });
       return `${formattedDate} às ${appointment.scheduled_time.slice(0, 5)}`;
     }

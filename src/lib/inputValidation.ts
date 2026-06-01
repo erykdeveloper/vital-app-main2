@@ -39,3 +39,20 @@ export const sanitizeDecimal = (value: string): string => {
     ? parts[0] + ',' + parts.slice(1).join('')
     : sanitized;
 };
+
+export const parseLocaleNumber = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const normalized = trimmed.includes(',')
+    ? trimmed.replace(/\./g, '').replace(',', '.')
+    : trimmed;
+  const number = Number(normalized);
+
+  return Number.isFinite(number) ? number : null;
+};
+
+export const parseLocaleInteger = (value: string): number | null => {
+  const number = parseLocaleNumber(value);
+  return number === null ? null : Math.round(number);
+};
