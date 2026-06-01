@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { ArrowLeft, Calendar, Clock, Flame, Eye, Trash2, Pencil, Dumbbell, Plus, Home, PersonStanding, Footprints, Bike, Zap, MapPin, Activity } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ptBR } from 'date-fns/locale';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDuration } from '@/lib/formatDuration';
 import { api } from '@/lib/api';
+import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
 import { fetchCardioWorkouts, fetchStrengthWorkouts } from '@/lib/workoutApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -88,23 +90,22 @@ const getCardioLabel = (workoutType: string): string => {
 };
 
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString + 'T00:00:00');
-  return date.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
+  return formatDateSafe(dateString, 'dd MMM yyyy', {
+    locale: ptBR,
+    noon: true,
+    fallback: 'Data indisponivel',
   });
 };
 
 const formatTimestamp = (timestamp: string): string => {
-  return new Date(timestamp).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
+  return formatDateSafe(timestamp, "dd MMM yyyy, HH:mm", {
+    locale: ptBR,
+    fallback: 'Data indisponivel',
   });
 };
+
+const getSortableDate = (primary: unknown, fallback: unknown) =>
+  parseDateValue(primary) ?? parseDateValue(fallback, { noon: true }) ?? new Date(0);
 
 export default function WorkoutHistory() {
   const { user } = useAuth();
@@ -276,13 +277,13 @@ export default function WorkoutHistory() {
     const musculacao = (filteredWorkouts || []).map(w => ({
       ...w,
       itemType: 'musculacao' as const,
-      sortDate: new Date(w.created_at || w.date + 'T00:00:00')
+      sortDate: getSortableDate(w.created_at, w.date)
     }));
     
     const cardio = (filteredCardio || []).map(c => ({
       ...c,
       itemType: 'cardio' as const,
-      sortDate: new Date(c.created_at || c.date + 'T00:00:00')
+      sortDate: getSortableDate(c.created_at, c.date)
     }));
     
     return [...musculacao, ...cardio].sort((a, b) => 

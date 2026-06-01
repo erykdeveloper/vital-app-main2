@@ -13,9 +13,9 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { api } from "@/lib/api";
+import { formatDateSafe } from "@/lib/dateUtils";
 import { fetchStrengthWorkouts } from "@/lib/workoutApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
@@ -448,7 +448,11 @@ export default function WorkoutForm() {
       setObjective(workoutObjective);
     }
 
-    const formattedDate = format(new Date(dateStr + "T12:00:00"), "dd/MM", { locale: ptBR });
+    const formattedDate = formatDateSafe(dateStr, "dd/MM", {
+      locale: ptBR,
+      noon: true,
+      fallback: "data anterior",
+    });
     toast.success(`Carregado treino de ${formattedDate} com ${exercisesToLoad.length} exercícios`);
   };
 

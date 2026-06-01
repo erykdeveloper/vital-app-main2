@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+import { toDateOnlyString } from '@/lib/dateUtils';
 
 export interface StrengthWorkoutApi {
   id: string;
@@ -27,24 +28,28 @@ export interface CardioWorkoutApi {
 }
 
 export function normalizeStrengthWorkout(item: any): StrengthWorkoutApi {
+  const date = toDateOnlyString(item.date);
+
   return {
     id: item.id,
     user_id: item.userId,
-    date: item.date,
+    date,
     objective: item.objective,
     duration_min: item.durationMin ?? null,
     calories: item.calories ?? null,
     exercises: Array.isArray(item.exercises) ? item.exercises : [],
-    created_at: item.createdAt ?? item.date,
+    created_at: item.createdAt ?? date,
     workout_type: item.workoutType ?? 'academia',
   };
 }
 
 export function normalizeCardioWorkout(item: any): CardioWorkoutApi {
+  const date = toDateOnlyString(item.date);
+
   return {
     id: item.id,
     user_id: item.userId,
-    date: item.date,
+    date,
     workout_type: item.workoutType,
     duration_min: item.durationMin ? Number(item.durationMin) : null,
     distance_km: item.distanceKm ? Number(item.distanceKm) : null,
@@ -52,7 +57,7 @@ export function normalizeCardioWorkout(item: any): CardioWorkoutApi {
     avg_pace: item.avgPace ?? null,
     avg_speed: item.avgSpeed ? Number(item.avgSpeed) : null,
     notes: item.notes ?? null,
-    created_at: item.createdAt ?? item.date,
+    created_at: item.createdAt ?? date,
   };
 }
 

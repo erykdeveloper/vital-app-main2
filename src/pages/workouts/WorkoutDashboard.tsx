@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, BarChart3, Crown, Flame, Footprints, TimerReset, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Button } from "@/components/ui/button";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PremiumPreviewGate } from "@/components/PremiumPreviewGate";
+import { formatDateSafe } from "@/lib/dateUtils";
 import { useProfile } from "@/hooks/useProfile";
 import { useReports, type ReportPeriod } from "@/hooks/useReports";
 
@@ -23,14 +23,13 @@ function formatDistance(value: number) {
 
 function formatTimelineLabel(label: string, period: ReportPeriod) {
   if (period === "weekly") {
-    const date = new Date(`${label}T12:00:00`);
-    return format(date, "dd/MM", { locale: ptBR });
+    return formatDateSafe(label, "dd/MM", { locale: ptBR, noon: true, fallback: label });
   }
 
   if (period === "monthly") {
     const [year, month] = label.split("-");
     const date = new Date(Number(year), Number(month) - 1, 1);
-    return format(date, "MMM", { locale: ptBR });
+    return formatDateSafe(date, "MMM", { locale: ptBR, fallback: label });
   }
 
   return label;
@@ -305,7 +304,10 @@ export default function WorkoutDashboard() {
                     <div className="rounded-[1.5rem] bg-[hsl(var(--secondary))] p-4">
                       <p className="text-sm text-muted-foreground">Registro</p>
                       <p className="mt-1 text-lg font-semibold">
-                        {format(new Date(report.latest_body_metrics.date), "dd 'de' MMMM yyyy", { locale: ptBR })}
+                        {formatDateSafe(report.latest_body_metrics.date, "dd 'de' MMMM yyyy", {
+                          locale: ptBR,
+                          noon: true,
+                        })}
                       </p>
                     </div>
                     <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-1">

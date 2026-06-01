@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { parseDateValue } from '@/lib/dateUtils';
 
 export interface Workout {
   id: string;
@@ -47,6 +48,8 @@ export const MONTH_NAMES = [
 
 export const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+const getWorkoutDate = (date: string) => parseDateValue(date, { noon: true });
+
 /**
  * Get all weeks of a given month with workout stats
  */
@@ -68,7 +71,8 @@ export const getWeeksOfMonth = (year: number, month: number, workouts: Workout[]
     
     // Filter workouts for this week
     const weekWorkouts = workouts.filter(w => {
-      const wDate = new Date(w.date + 'T00:00:00');
+      const wDate = getWorkoutDate(w.date);
+      if (!wDate) return false;
       return wDate >= weekStart && wDate <= weekEnd;
     });
     
@@ -109,7 +113,8 @@ export const getMonthsOfYear = (year: number, workouts: Workout[]): MonthStats[]
     const monthEnd = new Date(year, month + 1, 0);
     
     const monthWorkouts = workouts.filter(w => {
-      const wDate = new Date(w.date + 'T00:00:00');
+      const wDate = getWorkoutDate(w.date);
+      if (!wDate) return false;
       return wDate >= monthStart && wDate <= monthEnd;
     });
     
@@ -138,12 +143,19 @@ export const getYearlyStats = (workouts: Workout[]): YearStats[] => {
   if (workouts.length === 0) return [];
   
   // Get unique years from workouts
-  const years = [...new Set(workouts.map(w => new Date(w.date + 'T00:00:00').getFullYear()))];
+  const years = [
+    ...new Set(
+      workouts
+        .map((w) => getWorkoutDate(w.date)?.getFullYear())
+        .filter((year): year is number => typeof year === 'number'),
+    ),
+  ];
   years.sort((a, b) => b - a); // Most recent first
   
   return years.map(year => {
     const yearWorkouts = workouts.filter(w => {
-      const wDate = new Date(w.date + 'T00:00:00');
+      const wDate = getWorkoutDate(w.date);
+      if (!wDate) return false;
       return wDate.getFullYear() === year;
     });
     
@@ -177,7 +189,8 @@ export const getDailyChartData = (year: number, month: number, workouts: Workout
   const monthEnd = new Date(year, month + 1, 0);
   
   workouts.forEach(w => {
-    const wDate = new Date(w.date + 'T00:00:00');
+    const wDate = getWorkoutDate(w.date);
+    if (!wDate) return;
     if (wDate >= monthStart && wDate <= monthEnd) {
       const dayOfWeek = wDate.getDay();
       dayMap.set(dayOfWeek, (dayMap.get(dayOfWeek) || 0) + 1);
@@ -202,7 +215,8 @@ export const getMonthlyChartData = (year: number, workouts: Workout[]) => {
   }
   
   workouts.forEach(w => {
-    const wDate = new Date(w.date + 'T00:00:00');
+    const wDate = getWorkoutDate(w.date);
+    if (!wDate) return;
     if (wDate.getFullYear() === year) {
       const month = wDate.getMonth();
       monthMap.set(month, (monthMap.get(month) || 0) + 1);
@@ -223,7 +237,8 @@ export const getMonthSummary = (year: number, month: number, workouts: Workout[]
   const monthEnd = new Date(year, month + 1, 0);
   
   const monthWorkouts = workouts.filter(w => {
-    const wDate = new Date(w.date + 'T00:00:00');
+    const wDate = getWorkoutDate(w.date);
+    if (!wDate) return false;
     return wDate >= monthStart && wDate <= monthEnd;
   });
   

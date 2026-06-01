@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Search, Dumbbell, X, Check } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchStrengthWorkouts } from "@/lib/workoutApi";
+import { formatDateSafe } from "@/lib/dateUtils";
 import {
   Dialog,
   DialogContent,
@@ -85,8 +85,11 @@ export function PreviousWorkoutsModal({
   };
 
   const formatWorkoutDate = (dateStr: string) => {
-    const date = new Date(dateStr + "T12:00:00");
-    return format(date, "dd/MM/yyyy (EEEE)", { locale: ptBR });
+    return formatDateSafe(dateStr, "dd/MM/yyyy (EEEE)", {
+      locale: ptBR,
+      noon: true,
+      fallback: "Data indisponivel",
+    });
   };
 
   return (
