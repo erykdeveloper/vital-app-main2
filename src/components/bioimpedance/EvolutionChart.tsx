@@ -8,9 +8,9 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BioimpedanceRecord } from '@/hooks/useBioimpedance';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 interface EvolutionChartProps {
   records: BioimpedanceRecord[];
@@ -46,8 +46,8 @@ export function EvolutionChart({ records }: EvolutionChartProps) {
   const chartData = [...records]
     .reverse()
     .map((record) => ({
-      date: format(new Date(record.date), 'dd/MM', { locale: ptBR }),
-      fullDate: format(new Date(record.date), 'dd/MM/yyyy', { locale: ptBR }),
+      date: formatDateSafe(record.date, 'dd/MM', { locale: ptBR }),
+      fullDate: formatDateSafe(record.date, 'dd/MM/yyyy', { locale: ptBR }),
       weight_kg: record.weight_kg,
       body_fat_percent: record.body_fat_percent,
       muscle_percent: record.muscle_percent,

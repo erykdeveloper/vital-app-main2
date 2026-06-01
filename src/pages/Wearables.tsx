@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Activity,
@@ -23,6 +22,7 @@ import { useBioimpedance } from "@/hooks/useBioimpedance";
 import { useProfile } from "@/hooks/useProfile";
 import { useToast } from "@/hooks/use-toast";
 import { useWearables, type WearableProvider } from "@/hooks/useWearables";
+import { formatDateSafe } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 const providers: Array<{
@@ -59,7 +59,7 @@ const providers: Array<{
 
 function formatDateTime(value?: string | null) {
   if (!value) return "--";
-  return format(new Date(value), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  return formatDateSafe(value, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
 }
 
 function formatMetric(value?: number | null, suffix = "") {

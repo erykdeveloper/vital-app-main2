@@ -274,6 +274,7 @@ export function EMOMTimer({
           <>
             <div className="text-xl font-bold mb-4 text-muted-foreground">Pronto?</div>
             <button
+              type="button"
               onClick={startCountdown}
               className="text-7xl transition-all duration-300 hover:scale-110 active:scale-95"
             >

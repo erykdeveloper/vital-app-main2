@@ -10,13 +10,13 @@ import {
   Sparkles,
   TrendingUp,
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import { EvolutionChart } from '@/components/bioimpedance/EvolutionChart';
 import { MetricRow } from '@/components/bioimpedance/MetricRow';
 import { PostureAnalysis } from '@/components/bioimpedance/PostureAnalysis';
 import { useBioimpedance } from '@/hooks/useBioimpedance';
+import { formatDateSafe } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 
 const prepItems = [
@@ -39,7 +39,7 @@ const prepItems = [
 
 function formatDate(value?: string | null) {
   if (!value) return '--';
-  return format(new Date(value), "dd 'de' MMM yyyy", { locale: ptBR });
+  return formatDateSafe(value, "dd 'de' MMM yyyy", { locale: ptBR });
 }
 
 function formatNumber(value?: number | null, unit = '') {

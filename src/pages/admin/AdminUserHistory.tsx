@@ -3,8 +3,8 @@ import { ArrowLeft, Plus, Edit, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useUserBioimpedance, useAllProfiles } from '@/hooks/useAdmin';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 export default function AdminUserHistory() {
   const { userId } = useParams();
@@ -57,7 +57,7 @@ export default function AdminUserHistory() {
                       </div>
                       <div>
                         <p className="font-medium">
-                          {format(new Date(record.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          {formatDateSafe(record.date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                         </p>
                         <div className="flex gap-4 text-sm text-muted-foreground">
                           {record.weight_kg && <span>Peso: {record.weight_kg}kg</span>}

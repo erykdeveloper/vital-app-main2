@@ -148,7 +148,7 @@ export function ExerciseInputForm({
               <WeightInput weight={set.weight} onChange={(value) => updateSet(setIndex, "weight", value)} />
             </div>
             {currentExercise.sets.length > 1 && (
-              <button onClick={() => removeSet(setIndex)} className="text-destructive/60 hover:text-destructive p-1">
+              <button type="button" onClick={() => removeSet(setIndex)} className="text-destructive/60 hover:text-destructive p-1">
                 <Trash2 className="w-3 h-3" />
               </button>
             )}

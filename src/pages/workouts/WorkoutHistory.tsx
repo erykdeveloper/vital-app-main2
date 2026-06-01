@@ -603,7 +603,7 @@ export default function WorkoutHistory() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Exercício {exerciseIndex + 1}</span>
                     {editExercises.length > 1 && (
-                      <button onClick={() => removeExercise(exerciseIndex)} className="text-destructive hover:text-destructive/80">
+                      <button type="button" onClick={() => removeExercise(exerciseIndex)} className="text-destructive hover:text-destructive/80">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
@@ -649,7 +649,7 @@ export default function WorkoutHistory() {
                           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">kg</span>
                         </div>
                         {exercise.sets.length > 1 && (
-                          <button onClick={() => removeSet(exerciseIndex, setIndex)} className="text-destructive/60 hover:text-destructive p-1">
+                          <button type="button" onClick={() => removeSet(exerciseIndex, setIndex)} className="text-destructive/60 hover:text-destructive p-1">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         )}

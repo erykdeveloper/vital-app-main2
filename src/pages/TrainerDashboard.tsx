@@ -14,7 +14,6 @@ import {
   NotebookPen,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +28,7 @@ import {
   useTrainerUserSearch,
   useUpdateTrainerClient,
 } from '@/hooks/useTrainer';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 function getInitials(name: string) {
   return name
@@ -442,9 +442,11 @@ export default function TrainerDashboard() {
                               className="aspect-[4/5] w-full object-cover"
                             />
                             <div className="p-4 text-sm text-muted-foreground">
-                              {format(new Date(clientSummary.summary.latest_body_progress_photo.taken_at), "dd 'de' MMMM yyyy", {
-                                locale: ptBR,
-                              })}
+                              {formatDateSafe(
+                                clientSummary.summary.latest_body_progress_photo.taken_at,
+                                "dd 'de' MMMM yyyy",
+                                { locale: ptBR },
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -465,7 +467,7 @@ export default function TrainerDashboard() {
                             <div className="rounded-[1.25rem] bg-[rgba(255,255,255,0.03)] p-4">
                               <p className="text-sm text-muted-foreground">Data</p>
                               <p className="mt-1 text-lg font-semibold">
-                                {format(new Date(clientSummary.summary.latest_bioimpedance.date), "dd/MM/yyyy")}
+                                {formatDateSafe(clientSummary.summary.latest_bioimpedance.date, "dd/MM/yyyy")}
                               </p>
                             </div>
                             <div className="rounded-[1.25rem] bg-[rgba(255,255,255,0.03)] p-4">
@@ -581,7 +583,7 @@ export default function TrainerDashboard() {
                                 <div className="flex items-start justify-between gap-3">
                                   <h4 className="font-medium">{log.title}</h4>
                                   <span className="text-xs text-muted-foreground">
-                                    {format(new Date(log.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                    {formatDateSafe(log.created_at, "dd/MM/yyyy", { locale: ptBR })}
                                   </span>
                                 </div>
                                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{log.content}</p>

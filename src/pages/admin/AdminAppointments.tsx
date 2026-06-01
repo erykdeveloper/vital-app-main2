@@ -15,6 +15,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { formatDateSafe } from '@/lib/dateUtils';
 import {
   Select,
   SelectContent,
@@ -152,12 +153,19 @@ export default function AdminAppointments() {
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <div className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {format(new Date(appointment.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              {formatDateSafe(appointment.created_at, "dd/MM/yyyy 'às' HH:mm", {
+                locale: ptBR,
+                fallback: 'Data indisponivel',
+              })}
             </div>
             {appointment.scheduled_date && (
               <div className="flex items-center gap-1 text-accent">
                 <Clock className="w-3 h-3" />
-                Agendado: {format(new Date(appointment.scheduled_date), 'dd/MM', { locale: ptBR })}
+                Agendado: {formatDateSafe(appointment.scheduled_date, 'dd/MM', {
+                  locale: ptBR,
+                  noon: true,
+                  fallback: 'Data indisponivel',
+                })}
                 {appointment.scheduled_time && ` às ${appointment.scheduled_time.slice(0, 5)}`}
               </div>
             )}

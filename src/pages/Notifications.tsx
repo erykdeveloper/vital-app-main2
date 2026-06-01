@@ -12,7 +12,6 @@ import {
   Watch,
 } from "lucide-react";
 import type { ElementType } from "react";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -20,6 +19,7 @@ import { useAchievements } from "@/hooks/useAchievements";
 import { useMyAppointments } from "@/hooks/useAppointments";
 import { useProfile } from "@/hooks/useProfile";
 import { useWearables, type WearableNotification } from "@/hooks/useWearables";
+import { formatDateSafe } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 interface NotificationItem {
@@ -41,9 +41,7 @@ function getToneClasses(tone: NotificationItem["tone"]) {
 }
 
 function formatNotificationDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Agora";
-  return format(date, "dd MMM, HH:mm", { locale: ptBR });
+  return formatDateSafe(value, "dd MMM, HH:mm", { locale: ptBR, fallback: "Agora" });
 }
 
 function mapWearableNotification(notification: WearableNotification): NotificationItem {

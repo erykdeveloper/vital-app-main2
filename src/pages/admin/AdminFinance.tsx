@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Banknote, CheckCircle2, Clock, CreditCard, Search, Users } from 'lucide-react';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAdminOrders, type AdminOrder } from '@/hooks/useAdmin';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 const orderStatusLabels: Record<string, string> = {
   pending: 'Pendente',
@@ -58,7 +58,7 @@ function formatCurrency(valueCents: number, currency = 'BRL') {
 
 function formatDate(value: string | null) {
   if (!value) return 'Nao confirmado';
-  return format(new Date(value), "dd/MM/yyyy 'as' HH:mm", { locale: ptBR });
+  return formatDateSafe(value, "dd/MM/yyyy 'as' HH:mm", { locale: ptBR, fallback: 'Data indisponivel' });
 }
 
 function getOrderProducts(order: AdminOrder) {

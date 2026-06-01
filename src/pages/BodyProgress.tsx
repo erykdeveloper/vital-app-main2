@@ -8,7 +8,6 @@ import {
   Upload,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +17,7 @@ import { PremiumPreviewGate } from "@/components/PremiumPreviewGate";
 import { useToast } from "@/hooks/use-toast";
 import { useBodyProgress, type BodyProgressPhoto, type BodyProgressPose } from "@/hooks/useBodyProgress";
 import { useProfile } from "@/hooks/useProfile";
+import { formatDateSafe } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
 const poseOptions: Array<{ value: BodyProgressPose; label: string }> = [
@@ -35,7 +35,7 @@ function resolveImageUrl(url: string) {
 }
 
 function formatTakenDate(value: string) {
-  return format(new Date(value), "dd 'de' MMM yyyy", { locale: ptBR });
+  return formatDateSafe(value, "dd 'de' MMM yyyy", { locale: ptBR });
 }
 
 function PhotoCard({

@@ -27,9 +27,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { PremiumPreviewGate } from '@/components/PremiumPreviewGate';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { InjectablesAnalytics } from '@/components/injectables/InjectablesAnalytics';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 const locationLabels: Record<string, string> = {
   abdomen: 'Abdômen',
@@ -56,7 +56,7 @@ interface Injectable {
 }
 
 function formatInjectableDate(value: string) {
-  return format(new Date(value), "dd 'de' MMM", { locale: ptBR });
+  return formatDateSafe(value, "dd 'de' MMM", { locale: ptBR, noon: true });
 }
 
 function StatCard({

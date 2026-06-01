@@ -31,8 +31,8 @@ import {
   useReviewTrainerApplication,
 } from '@/hooks/useAdmin';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { formatDateSafe } from '@/lib/dateUtils';
 
 const apiOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/api\/?$/, '');
 
@@ -302,7 +302,7 @@ export default function AdminUsers() {
                     </p>
                     {profile.entry_date && (
                       <p className="text-xs text-muted-foreground">
-                        Desde {format(new Date(profile.entry_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                        Desde {formatDateSafe(profile.entry_date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                       </p>
                     )}
                   </div>

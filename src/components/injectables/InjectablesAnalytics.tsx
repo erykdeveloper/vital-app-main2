@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { format, startOfMonth, endOfMonth, differenceInDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, differenceInDays, isAfter, isBefore } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { AlertTriangle, CheckCircle, Calendar, TrendingUp, Syringe } from 'lucide-react';
+import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
 
 interface Injectable {
   id: string;
@@ -18,6 +19,8 @@ interface Props {
   injectables: Injectable[];
 }
 
+const getInjectableDate = (value: string) => parseDateValue(value, { noon: true });
+
 export function InjectablesAnalytics({ injectables }: Props) {
   const analytics = useMemo(() => {
     const today = new Date();
@@ -26,13 +29,14 @@ export function InjectablesAnalytics({ injectables }: Props) {
 
     // Filter injections for current month
     const thisMonthInjections = injectables.filter((inj) => {
-      const injDate = parseISO(inj.date);
+      const injDate = getInjectableDate(inj.date);
+      if (!injDate) return false;
       return !isBefore(injDate, monthStart) && !isAfter(injDate, monthEnd);
     });
 
     // Sort all injections by date
     const sortedInjections = [...injectables].sort(
-      (a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime()
+      (a, b) => (getInjectableDate(a.date)?.getTime() ?? 0) - (getInjectableDate(b.date)?.getTime() ?? 0)
     );
 
     // Calculate average interval between injections
@@ -40,10 +44,11 @@ export function InjectablesAnalytics({ injectables }: Props) {
     if (sortedInjections.length >= 2) {
       const intervals: number[] = [];
       for (let i = 1; i < sortedInjections.length; i++) {
-        const diff = differenceInDays(
-          parseISO(sortedInjections[i].date),
-          parseISO(sortedInjections[i - 1].date)
-        );
+        const currentDate = getInjectableDate(sortedInjections[i].date);
+        const previousDate = getInjectableDate(sortedInjections[i - 1].date);
+        if (!currentDate || !previousDate) continue;
+
+        const diff = differenceInDays(currentDate, previousDate);
         if (diff > 0 && diff <= 30) {
           intervals.push(diff);
         }
@@ -62,16 +67,24 @@ export function InjectablesAnalytics({ injectables }: Props) {
 
     // Find future injections
     const futureInjections = injectables
-      .filter((inj) => isAfter(parseISO(inj.date), today))
-      .sort((a, b) => parseISO(a.date).getTime() - parseISO(b.date).getTime());
+      .filter((inj) => {
+        const injDate = getInjectableDate(inj.date);
+        return injDate ? isAfter(injDate, today) : false;
+      })
+      .sort((a, b) => (getInjectableDate(a.date)?.getTime() ?? 0) - (getInjectableDate(b.date)?.getTime() ?? 0));
 
     const nextInjection = futureInjections[0] || null;
-    const daysUntilNext = nextInjection ? differenceInDays(parseISO(nextInjection.date), today) : null;
+    const nextInjectionDate = nextInjection ? getInjectableDate(nextInjection.date) : null;
+    const daysUntilNext = nextInjectionDate ? differenceInDays(nextInjectionDate, today) : null;
 
     // Check if missed injection
-    const pastInjections = sortedInjections.filter((inj) => !isAfter(parseISO(inj.date), today));
+    const pastInjections = sortedInjections.filter((inj) => {
+      const injDate = getInjectableDate(inj.date);
+      return injDate ? !isAfter(injDate, today) : false;
+    });
     const lastInjection = pastInjections[pastInjections.length - 1] || null;
-    const daysSinceLast = lastInjection ? differenceInDays(today, parseISO(lastInjection.date)) : null;
+    const lastInjectionDate = lastInjection ? getInjectableDate(lastInjection.date) : null;
+    const daysSinceLast = lastInjectionDate ? differenceInDays(today, lastInjectionDate) : null;
     const missedInjection = daysSinceLast !== null && daysSinceLast > avgInterval + 2;
 
     // Chart data - group by day of month
@@ -79,7 +92,8 @@ export function InjectablesAnalytics({ injectables }: Props) {
     const injectionsByDay: Record<string, number> = {};
     
     thisMonthInjections.forEach((inj) => {
-      const day = format(parseISO(inj.date), 'd');
+      const day = formatDateSafe(inj.date, 'd', { noon: true, fallback: '' });
+      if (!day) return;
       injectionsByDay[day] = (injectionsByDay[day] || 0) + 1;
     });
 
@@ -168,7 +182,7 @@ export function InjectablesAnalytics({ injectables }: Props) {
             <div>
               <p className="font-semibold">{analytics.nextInjection.medication}</p>
               <p className="text-sm text-muted-foreground">
-                {format(parseISO(analytics.nextInjection.date), "dd 'de' MMMM", { locale: ptBR })}
+                {formatDateSafe(analytics.nextInjection.date, "dd 'de' MMMM", { locale: ptBR, noon: true })}
               </p>
             </div>
             <div className="bg-primary/15 rounded-xl px-4 py-2 text-center">
