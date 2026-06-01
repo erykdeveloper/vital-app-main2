@@ -163,7 +163,7 @@ export function TabataTimer({ onComplete, onEarlyEnd, onTimerStateChange }: Taba
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, phase, currentRound, currentSet, customRounds, customSets, customWorkTime, customRestTime, playBeep, playCountdownBeep, onComplete, totalElapsed]);
+  }, [isRunning, phase, currentRound, currentSet, customRounds, customSets, customWorkTime, customRestTime, playBeep, playCountdownBeep, onComplete, onTimerStateChange, totalElapsed]);
 
   const startCountdown = () => {
     initAudio();

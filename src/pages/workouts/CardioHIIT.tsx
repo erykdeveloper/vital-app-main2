@@ -87,10 +87,10 @@ export default function CardioHIIT() {
     hasUnsavedChanges
   });
 
-  // Load draft on mount (only if no timer active)
+  // Load draft on mount
   useEffect(() => {
     const draft = loadDraft();
-    if (draft && !isTimerActive) {
+    if (draft) {
       setHiitType(draft.hiitType || '');
       setDurationSec(draft.durationSec ?? '');
       setRestSec(draft.restSec ?? '');
@@ -102,7 +102,7 @@ export default function CardioHIIT() {
       }
     }
     setDraftLoaded(true);
-  }, []);
+  }, [loadDraft]);
 
   // Auto-save draft on changes (only when not timer active)
   useEffect(() => {
@@ -110,7 +110,7 @@ export default function CardioHIIT() {
     if (!isTimerActive && (hiitType || durationSec || calories || notes.trim())) {
       saveDraft({ hiitType, durationSec, restSec, calories, notes, completedRounds });
     }
-  }, [hiitType, durationSec, restSec, calories, notes, completedRounds, isTimerActive, draftLoaded]);
+  }, [hiitType, durationSec, restSec, calories, notes, completedRounds, isTimerActive, draftLoaded, saveDraft]);
 
   // Format seconds to display string
   const formatTime = (totalSec: number | '') => {

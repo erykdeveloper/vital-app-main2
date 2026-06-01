@@ -71,7 +71,7 @@ export default function CardioOther() {
       toast.info('Rascunho recuperado automaticamente');
     }
     setDraftLoaded(true);
-  }, []);
+  }, [loadDraft]);
 
   // Auto-save draft on changes
   useEffect(() => {
@@ -79,7 +79,7 @@ export default function CardioOther() {
     if (hasUnsavedChanges) {
       saveDraft({ activityName, hours, minutes, seconds, distance, calories, notes });
     }
-  }, [activityName, hours, minutes, seconds, distance, calories, notes, hasUnsavedChanges, draftLoaded]);
+  }, [activityName, hours, minutes, seconds, distance, calories, notes, hasUnsavedChanges, draftLoaded, saveDraft]);
 
   const handleSave = async (): Promise<boolean> => {
     if (!user) {

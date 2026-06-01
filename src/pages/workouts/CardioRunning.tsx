@@ -70,7 +70,7 @@ export default function CardioRunning() {
       toast.info('Rascunho recuperado automaticamente');
     }
     setDraftLoaded(true);
-  }, []);
+  }, [loadDraft]);
 
   // Auto-save draft on changes
   useEffect(() => {
@@ -78,7 +78,7 @@ export default function CardioRunning() {
     if (hasUnsavedChanges) {
       saveDraft({ durationHours, durationMin, durationSec, distanceKm, calories, notes });
     }
-  }, [durationHours, durationMin, durationSec, distanceKm, calories, notes, hasUnsavedChanges, draftLoaded]);
+  }, [durationHours, durationMin, durationSec, distanceKm, calories, notes, hasUnsavedChanges, draftLoaded, saveDraft]);
 
   const handleSave = async () => {
     if (!user) {

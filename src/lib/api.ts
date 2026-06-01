@@ -99,6 +99,15 @@ export const api = {
       },
       useAuth,
     ),
+  put: <T>(path: string, body?: unknown, useAuth = true) =>
+    request<T>(
+      path,
+      {
+        method: 'PUT',
+        body: body instanceof FormData ? body : JSON.stringify(body ?? {}),
+      },
+      useAuth,
+    ),
   patch: <T>(path: string, body?: unknown, useAuth = true) =>
     request<T>(
       path,

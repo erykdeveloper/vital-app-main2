@@ -181,7 +181,7 @@ export default function WorkoutForm() {
       toast.info('Rascunho recuperado automaticamente');
     }
     setDraftLoaded(true);
-  }, []);
+  }, [loadDraft]);
 
   // Salvar automaticamente no localStorage
   useEffect(() => {
@@ -538,14 +538,14 @@ export default function WorkoutForm() {
 
     const totalMinutes =
       (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
-    const durationMin = totalMinutes > 0 ? Math.max(1, Math.round(totalMinutes)) : null;
+    const durationMinutes = totalMinutes > 0 ? Math.max(1, Math.round(totalMinutes)) : null;
 
     setSaving(true);
     try {
       const workoutData = {
         date: today.toISOString().split("T")[0],
         objective: workoutObjective,
-        duration_min: durationMin,
+        duration_min: durationMinutes,
         calories: calories || null,
         exercises: exercisesToSave as unknown,
         workout_type: type,

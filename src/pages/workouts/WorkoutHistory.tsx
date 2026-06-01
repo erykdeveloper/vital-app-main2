@@ -141,17 +141,17 @@ export default function WorkoutHistory() {
   });
 
   // Filter workouts based on selected filter
-  const filteredWorkouts = workouts?.filter(w => {
+  const filteredWorkouts = useMemo(() => (workouts ?? []).filter(w => {
     if (filter === 'todos') return true;
     if (filter === 'musculacao') return true; // All workouts in workouts table are musculação
     return false;
-  }) || [];
+  }), [filter, workouts]);
 
-  const filteredCardio = cardioWorkouts?.filter(w => {
+  const filteredCardio = useMemo(() => (cardioWorkouts ?? []).filter(w => {
     if (filter === 'todos') return true;
     if (filter === 'cardio') return true;
     return false;
-  }) || [];
+  }), [cardioWorkouts, filter]);
 
   const totalCount = (filter === 'todos' 
     ? (workouts?.length || 0) + (cardioWorkouts?.length || 0)

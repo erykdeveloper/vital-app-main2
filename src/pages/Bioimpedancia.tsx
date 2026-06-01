@@ -155,7 +155,6 @@ export default function Bioimpedancia() {
           <MetricCard
             label="Peso atual"
             value={latestRecord?.weight_kg}
-            previousValue={previousRecord?.weight_kg}
             difference={getDifference(latestRecord?.weight_kg ?? null, previousRecord?.weight_kg ?? null)}
             unit="kg"
             isLowerBetter

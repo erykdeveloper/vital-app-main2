@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, RotateCcw, Plus, Minus, Volume2, VolumeX, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,13 +40,13 @@ export const AMRAPTimer = ({
 
   const targetSeconds = targetMinutes * 60;
 
-  const initAudio = () => {
+  const initAudio = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-  };
+  }, []);
 
-  const playBeep = (frequency: number, duration: number, type: 'round' | 'warning' | 'complete' = 'round') => {
+  const playBeep = useCallback((frequency: number, duration: number, type: 'round' | 'warning' | 'complete' = 'round') => {
     if (!soundEnabled || !audioContextRef.current) return;
     
     const ctx = audioContextRef.current;
@@ -92,7 +92,7 @@ export const AMRAPTimer = ({
         osc3.stop(ctx.currentTime + 0.5);
       }, 300);
     }
-  };
+  }, [soundEnabled]);
 
   useEffect(() => {
     if (isRunning && !isComplete) {
@@ -129,7 +129,7 @@ export const AMRAPTimer = ({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, isComplete, targetSeconds, rounds, onComplete, soundEnabled]);
+  }, [isRunning, isComplete, targetSeconds, rounds, onComplete, onTimerStateChange, playBeep]);
 
   const startCountdown = () => {
     initAudio();

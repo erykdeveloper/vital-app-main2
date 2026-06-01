@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Search, Dumbbell, X, Check } from "lucide-react";
@@ -51,13 +51,7 @@ export function PreviousWorkoutsModal({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  useEffect(() => {
-    if (open && user) {
-      fetchWorkouts();
-    }
-  }, [open, user]);
-
-  const fetchWorkouts = async () => {
+  const fetchWorkouts = useCallback(async () => {
     if (!user) return;
 
     setLoading(true);
@@ -73,7 +67,13 @@ export function PreviousWorkoutsModal({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, workoutType]);
+
+  useEffect(() => {
+    if (open && user) {
+      void fetchWorkouts();
+    }
+  }, [fetchWorkouts, open, user]);
 
   const filteredWorkouts = workouts.filter((w) =>
     w.objective.toLowerCase().includes(searchTerm.toLowerCase())

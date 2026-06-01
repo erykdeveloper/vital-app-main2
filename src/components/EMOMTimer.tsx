@@ -138,7 +138,7 @@ export function EMOMTimer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, currentRound, totalRounds, secondsPerRound, playBeep, playStartRound, playComplete, onComplete, totalElapsed]);
+  }, [isRunning, currentRound, totalRounds, secondsPerRound, playBeep, playStartRound, playComplete, onComplete, onTimerStateChange, totalElapsed]);
 
   const startCountdown = () => {
     initAudio();

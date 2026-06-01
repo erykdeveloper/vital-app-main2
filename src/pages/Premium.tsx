@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { ArrowLeft, Crown, Check, CreditCard, QrCode, Sparkles, Star, ShieldCheck } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -220,7 +220,7 @@ export default function Premium() {
     };
   }, [toast]);
 
-  async function handleCheckout() {
+  const handleCheckout = useCallback(async () => {
     if (isPremiumActive) {
       toast({
         title: 'Premium ativo',
@@ -264,7 +264,7 @@ export default function Premium() {
     } finally {
       setIsCheckoutLoading(false);
     }
-  }
+  }, [isPremiumActive, paymentMethod, product, toast]);
 
   useEffect(() => {
     if (isPremiumActive) return;
@@ -278,7 +278,7 @@ export default function Premium() {
       description: 'Estamos iniciando seu checkout premium.',
     });
     void handleCheckout();
-  }, [isCheckoutLoading, isLoading, isPremiumActive, product, registerFlowState?.autostartCheckout, toast]);
+  }, [handleCheckout, isCheckoutLoading, isLoading, isPremiumActive, product, registerFlowState?.autostartCheckout, toast]);
 
   return (
     <div className="min-h-full bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">

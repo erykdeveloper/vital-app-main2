@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "./useAuth";
 
@@ -43,7 +43,7 @@ export function useBodyProgress() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPhotos = async () => {
+  const fetchPhotos = useCallback(async () => {
     if (!user) {
       setPhotos([]);
       setLoading(false);
@@ -61,11 +61,11 @@ export function useBodyProgress() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     void fetchPhotos();
-  }, [user]);
+  }, [fetchPhotos]);
 
   const uploadPhoto = async ({ file, pose, label, notes, taken_at }: UploadPayload) => {
     if (!user) return { error: "Not authenticated" };
