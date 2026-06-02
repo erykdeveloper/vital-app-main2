@@ -16,6 +16,7 @@ import { Link, useParams } from "react-router-dom";
 import { ptBR } from "date-fns/locale";
 import { api } from "@/lib/api";
 import { formatDateSafe } from "@/lib/dateUtils";
+import { formatWorkoutFocusObjective, getSelectedWorkoutFocusLabels, workoutFocusOptions } from "@/lib/workoutFocus";
 import { fetchStrengthWorkouts } from "@/lib/workoutApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
@@ -141,6 +142,20 @@ export default function WorkoutForm() {
   } | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<{ type: "info" | "success" | "error"; message: string } | null>(null);
+  const selectedFocusLabels = getSelectedWorkoutFocusLabels(objective);
+  const hasLegacyObjective = Boolean(objective.trim()) && selectedFocusLabels.length === 0;
+
+  const toggleWorkoutFocus = (focus: string) => {
+    const selectedSet = new Set(selectedFocusLabels);
+
+    if (selectedSet.has(focus)) {
+      selectedSet.delete(focus);
+    } else {
+      selectedSet.add(focus);
+    }
+
+    setObjective(formatWorkoutFocusObjective(Array.from(selectedSet)));
+  };
 
   // Detectar se há dados não salvos
   const hasCurrentExerciseData = !!(
@@ -493,7 +508,14 @@ export default function WorkoutForm() {
       return false;
     }
 
-    const workoutObjective = objective.trim() || config.label;
+    const workoutObjective = objective.trim();
+    if (!workoutObjective) {
+      const message = "Selecione o foco do treino";
+      setSaveFeedback({ type: "error", message });
+      toast.error(message);
+      return false;
+    }
+
     let exercisesForSave = addedExercises.map(normalizeExercise);
 
     if (hasCurrentExerciseData) {
@@ -739,16 +761,44 @@ export default function WorkoutForm() {
             <IconComponent className="w-5 h-5 text-primary" />
           </div>
           <div>
-            <Label className="text-lg font-semibold">Treino do dia</Label>
-            <p className="text-sm text-muted-foreground">Dê um nome para organizar o histórico.</p>
+            <Label className="text-lg font-semibold">Foco do treino</Label>
+            <p className="text-sm text-muted-foreground">Grupos musculares</p>
           </div>
         </div>
-        <Input
-          placeholder="Peito/Tríceps, Full body, Lower..."
-          value={objective}
-          onChange={(e) => setObjective(e.target.value)}
-          className="h-14 rounded-xl border-white/5 bg-secondary/70 text-base focus-visible:ring-offset-0"
-        />
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {workoutFocusOptions.map((focus) => {
+            const selected = selectedFocusLabels.includes(focus);
+
+            return (
+              <button
+                key={focus}
+                type="button"
+                onClick={() => toggleWorkoutFocus(focus)}
+                className={`flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
+                  selected
+                    ? "border-primary/45 bg-primary/15 text-primary"
+                    : "border-white/5 bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                }`}
+              >
+                {focus}
+              </button>
+            );
+          })}
+        </div>
+        {(objective || hasLegacyObjective) && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-background/30 px-3 py-2">
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">
+              {objective || "Nenhum foco selecionado"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setObjective("")}
+              className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            >
+              Limpar
+            </button>
+          </div>
+        )}
 
         {/* Botões de Repetir Treino */}
         <div className="grid gap-2 sm:grid-cols-2">

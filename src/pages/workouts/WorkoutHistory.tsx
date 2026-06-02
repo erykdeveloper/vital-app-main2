@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDuration } from '@/lib/formatDuration';
 import { api } from '@/lib/api';
 import { formatDateSafe, parseDateValue } from '@/lib/dateUtils';
+import { formatWorkoutFocusObjective, getSelectedWorkoutFocusLabels, workoutFocusOptions } from '@/lib/workoutFocus';
 import { fetchCardioWorkouts, fetchStrengthWorkouts } from '@/lib/workoutApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -122,6 +123,20 @@ export default function WorkoutHistory() {
   const [editExercises, setEditExercises] = useState<Exercise[]>([]);
   const [editDuration, setEditDuration] = useState<number | ''>('');
   const [editCalories, setEditCalories] = useState<number | ''>('');
+  const selectedEditFocusLabels = getSelectedWorkoutFocusLabels(editObjective);
+  const hasLegacyEditObjective = Boolean(editObjective.trim()) && selectedEditFocusLabels.length === 0;
+
+  const toggleEditWorkoutFocus = (focus: string) => {
+    const selectedSet = new Set(selectedEditFocusLabels);
+
+    if (selectedSet.has(focus)) {
+      selectedSet.delete(focus);
+    } else {
+      selectedSet.add(focus);
+    }
+
+    setEditObjective(formatWorkoutFocusObjective(Array.from(selectedSet)));
+  };
 
   const { data: workouts, isLoading } = useQuery({
     queryKey: ['workouts', user?.id],
@@ -575,13 +590,42 @@ export default function WorkoutHistory() {
           
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Treino</Label>
-              <Input
-                placeholder="Peito/Tríceps, Pernas, Cardio…"
-                value={editObjective}
-                onChange={(e) => setEditObjective(e.target.value)}
-                className="bg-background border-border"
-              />
+              <Label>Foco do treino</Label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {workoutFocusOptions.map((focus) => {
+                  const selected = selectedEditFocusLabels.includes(focus);
+
+                  return (
+                    <button
+                      key={focus}
+                      type="button"
+                      onClick={() => toggleEditWorkoutFocus(focus)}
+                      className={cn(
+                        'flex min-h-10 items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold transition-colors',
+                        selected
+                          ? 'border-accent/45 bg-accent/15 text-accent'
+                          : 'border-white/5 bg-background text-muted-foreground hover:bg-secondary hover:text-foreground'
+                      )}
+                    >
+                      {focus}
+                    </button>
+                  );
+                })}
+              </div>
+              {(editObjective || hasLegacyEditObjective) && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-background px-3 py-2">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                    {editObjective || 'Nenhum foco selecionado'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEditObjective('')}
+                    className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                  >
+                    Limpar
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">
