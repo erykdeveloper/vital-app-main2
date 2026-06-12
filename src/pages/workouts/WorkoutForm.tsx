@@ -1,504 +1,473 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
-  CalendarCheck,
-  CheckCircle2,
-  Clock,
+  Check,
+  Delete,
   Dumbbell,
   Flame,
-  History,
+  Flag,
   Home,
-  ListChecks,
+  MoreVertical,
+  NotebookText,
   PersonStanding,
-  RotateCcw,
+  Plus,
+  Repeat2,
+  Search,
+  Trophy,
+  X,
+  type LucideIcon,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
-import { ptBR } from "date-fns/locale";
 import { api } from "@/lib/api";
-import { formatDateSafe } from "@/lib/dateUtils";
-import { formatWorkoutFocusObjective, getSelectedWorkoutFocusLabels, workoutFocusOptions } from "@/lib/workoutFocus";
-import { fetchStrengthWorkouts } from "@/lib/workoutApi";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { useWorkoutDraft } from "@/hooks/useWorkoutDraft";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
-import { AddedExerciseCard } from "@/components/workouts/AddedExerciseCard";
-import { ExerciseInputForm } from "@/components/workouts/ExerciseInputForm";
-import { PreviousWorkoutsModal } from "@/components/workouts/PreviousWorkoutsModal";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 
 interface ExerciseSet {
   reps: number;
   weight: number;
+  completed?: boolean;
 }
 
 interface Exercise {
   name: string;
+  group?: string;
+  category?: string;
+  location?: string;
+  previous?: string[];
   sets: ExerciseSet[];
+}
+
+interface ExerciseCatalogItem {
+  id: string;
+  name: string;
+  group: string;
+  category: "Barra" | "Halter" | "Máquina" | "Polia" | "Peso corpo";
+  location: string;
+  focus: string;
+  tone: string;
+  previous: string[];
+  defaultSets: ExerciseSet[];
 }
 
 interface WorkoutDraftData {
   objective: string;
   addedExercises: Exercise[];
-  currentExercise: Exercise;
-  durationHours: number | '';
-  durationMin: number | '';
-  durationSec: number | '';
-  calories: number | '';
+  calories: number | "";
 }
 
-const emptyExercise: Exercise = {
-  name: "",
-  sets: [
-    { reps: 0, weight: 0 },
-    { reps: 0, weight: 0 },
-    { reps: 0, weight: 0 },
-  ],
+type NumpadTarget =
+  | { kind: "set"; exerciseIndex: number; setIndex: number; field: "weight" | "reps" }
+  | { kind: "calories" };
+
+const workoutTypeConfig: Record<string, { label: string; icon: LucideIcon; defaultFocus: string }> = {
+  academia: { label: "Academia", icon: Dumbbell, defaultFocus: "Peitoral" },
+  "em-casa": { label: "Em Casa", icon: Home, defaultFocus: "Peitoral" },
+  crossfit: { label: "CrossFit", icon: Flame, defaultFocus: "Full body" },
+  calistenia: { label: "Calistenia", icon: PersonStanding, defaultFocus: "Peso corporal" },
 };
 
-const getFilledSets = (sets: ExerciseSet[]) =>
-  sets
+const exerciseCatalog: ExerciseCatalogItem[] = [
+  {
+    id: "supino-reto-barra",
+    name: "Supino Reto (barra)",
+    group: "Peitoral · Tríceps",
+    category: "Barra",
+    location: "Academia",
+    focus: "Peitoral · Tríceps",
+    tone: "from-[#192d42] to-[#341338]",
+    previous: ["80×10", "80×10", "80×9"],
+    defaultSets: [
+      { weight: 80, reps: 10, completed: true },
+      { weight: 80, reps: 10, completed: true },
+      { weight: 82, reps: 8, completed: true },
+    ],
+  },
+  {
+    id: "crucifixo-halteres",
+    name: "Crucifixo (halteres)",
+    group: "Peitoral",
+    category: "Halter",
+    location: "Academia",
+    focus: "Peitoral",
+    tone: "from-[#3b1226] to-[#301039]",
+    previous: ["18×12", "18×12", "18×10"],
+    defaultSets: [
+      { weight: 20, reps: 12, completed: true },
+      { weight: 20, reps: 0, completed: false },
+      { weight: 0, reps: 0, completed: false },
+    ],
+  },
+  {
+    id: "supino-inclinado-halter",
+    name: "Supino Inclinado (halter)",
+    group: "Peitoral · Ombros",
+    category: "Halter",
+    location: "Academia",
+    focus: "Peitoral · Ombros",
+    tone: "from-[#092333] to-[#32123c]",
+    previous: ["24×10", "24×10", "22×12"],
+    defaultSets: [
+      { weight: 24, reps: 10, completed: false },
+      { weight: 24, reps: 10, completed: false },
+      { weight: 22, reps: 12, completed: false },
+    ],
+  },
+  {
+    id: "crossover-polia",
+    name: "Crossover (polia)",
+    group: "Peitoral",
+    category: "Polia",
+    location: "Academia",
+    focus: "Peitoral",
+    tone: "from-[#571417] to-[#32123c]",
+    previous: ["18×12", "18×12", "16×15"],
+    defaultSets: [
+      { weight: 18, reps: 12, completed: false },
+      { weight: 18, reps: 12, completed: false },
+      { weight: 16, reps: 15, completed: false },
+    ],
+  },
+  {
+    id: "flexao-braco",
+    name: "Flexão de braço",
+    group: "Peitoral · Tríceps",
+    category: "Peso corpo",
+    location: "Em casa",
+    focus: "Peitoral · Tríceps",
+    tone: "from-[#073b20] to-[#241035]",
+    previous: ["15 reps", "12 reps", "10 reps"],
+    defaultSets: [
+      { weight: 0, reps: 15, completed: false },
+      { weight: 0, reps: 12, completed: false },
+      { weight: 0, reps: 10, completed: false },
+    ],
+  },
+  {
+    id: "supino-declinado-barra",
+    name: "Supino Declinado (barra)",
+    group: "Peitoral inferior",
+    category: "Barra",
+    location: "Academia",
+    focus: "Peitoral inferior",
+    tone: "from-[#4b2b08] to-[#2b103a]",
+    previous: ["70×10", "70×10", "68×12"],
+    defaultSets: [
+      { weight: 70, reps: 10, completed: false },
+      { weight: 70, reps: 10, completed: false },
+      { weight: 68, reps: 12, completed: false },
+    ],
+  },
+];
+
+const exerciseFilters = ["Todos", "Barra", "Halter", "Máquina", "Polia"] as const;
+
+const defaultExercises = [
+  createExerciseFromCatalog(exerciseCatalog[0]),
+  createExerciseFromCatalog(exerciseCatalog[1]),
+];
+
+function createExerciseFromCatalog(item: ExerciseCatalogItem): Exercise {
+  return {
+    name: item.name,
+    group: item.group,
+    category: item.category,
+    location: item.location,
+    previous: item.previous,
+    sets: item.defaultSets.map((set) => ({ ...set })),
+  };
+}
+
+function getExerciseMeta(exercise: Exercise) {
+  return exerciseCatalog.find((item) => item.name === exercise.name);
+}
+
+function getCompletedSets(exercise: Exercise) {
+  return exercise.sets.filter((set) => set.completed && Number(set.reps) > 0);
+}
+
+function getSaveSets(exercise: Exercise) {
+  return exercise.sets
     .map((set) => ({
       reps: Number(set.reps) || 0,
       weight: Number(set.weight) || 0,
     }))
-    .filter((set) => set.reps > 0 || set.weight > 0);
+    .filter((set) => set.reps > 0);
+}
 
-const normalizeExercise = (exercise: Exercise): Exercise => ({
-  name: exercise.name.trim(),
-  sets: getFilledSets(exercise.sets),
-});
+function normalizeExercise(exercise: Exercise): Exercise {
+  return {
+    name: exercise.name.trim(),
+    sets: getSaveSets(exercise),
+  };
+}
 
-const workoutTypeConfig = {
-  academia: { label: "Academia", icon: Dumbbell },
-  "em-casa": { label: "Em Casa", icon: Home },
-  crossfit: { label: "CrossFit", icon: Flame },
-  calistenia: { label: "Calistenia", icon: PersonStanding },
-};
+function formatTimerDisplay(seconds: number) {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
 
-const getDayOfWeek = (date: Date): string => {
-  const days = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
-  return days[date.getDay()];
-};
+function formatWeight(value: number) {
+  if (!value) return "—";
+  return Number.isInteger(value) ? String(value) : String(value).replace(".", ",");
+}
 
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString("pt-BR", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-};
+function formatNumberValue(value: number | "") {
+  if (value === "" || value === 0) return "—";
+  return String(value);
+}
+
+function getMaxWeight(exercises: Exercise[]) {
+  return exercises.reduce((max, exercise) => {
+    const exerciseMax = exercise.sets.reduce((setMax, set) => Math.max(setMax, Number(set.weight) || 0), 0);
+    return Math.max(max, exerciseMax);
+  }, 0);
+}
+
+function ExerciseIllustration({ tone }: { tone: string }) {
+  return (
+    <div className={`relative h-20 overflow-hidden rounded-t-[1rem] bg-gradient-to-br ${tone}`}>
+      <div className="absolute left-1/2 top-7 h-8 w-14 -translate-x-1/2 rounded-[50%] bg-[#6b3a25]" />
+      <div className="absolute left-1/2 top-4 h-6 w-6 -translate-x-1/2 rounded-full bg-[#5b1a69]" />
+      <div className="absolute left-[22%] top-10 h-2 w-[58%] -rotate-6 rounded-full bg-primary/60" />
+      <div className="absolute left-[19%] top-9 h-4 w-4 rounded-full bg-primary/65" />
+      <div className="absolute right-[19%] top-8 h-4 w-4 rounded-full bg-primary/65" />
+    </div>
+  );
+}
+
+function MetaIcon({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+      <Icon className="h-3.5 w-3.5 text-primary" />
+      {children}
+    </span>
+  );
+}
 
 export default function WorkoutForm() {
   const { type = "academia" } = useParams<{ type: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const today = new Date();
+  const config = workoutTypeConfig[type] || workoutTypeConfig.academia;
 
-  const config = workoutTypeConfig[type as keyof typeof workoutTypeConfig] || workoutTypeConfig.academia;
-  const IconComponent = config.icon;
-
-  // Draft persistence
   const { saveDraft, loadDraft, clearDraft } = useWorkoutDraft<WorkoutDraftData>(type);
   const [draftLoaded, setDraftLoaded] = useState(false);
-
-  const [objective, setObjective] = useState("");
-  
-  // Exercícios já adicionados (confirmados)
-  const [addedExercises, setAddedExercises] = useState<Exercise[]>([]);
-  
-  // Exercício sendo preenchido no formulário
-  const [currentExercise, setCurrentExercise] = useState<Exercise>({ ...emptyExercise });
-  
-  // Índice do exercício sendo editado (null = novo)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
-
-  const [durationHours, setDurationHours] = useState<number | "">("");
-  const [durationMin, setDurationMin] = useState<number | "">("");
-  const [durationSec, setDurationSec] = useState<number | "">("");
+  const [objective, setObjective] = useState(config.defaultFocus);
+  const [addedExercises, setAddedExercises] = useState<Exercise[]>(defaultExercises);
   const [calories, setCalories] = useState<number | "">("");
-
-  // Modal de treinos anteriores
-  const [showPreviousWorkouts, setShowPreviousWorkouts] = useState(false);
-  const [loadingLastWorkout, setLoadingLastWorkout] = useState(false);
-  const [confirmReplaceDialog, setConfirmReplaceDialog] = useState(false);
-  const [pendingWorkoutToLoad, setPendingWorkoutToLoad] = useState<{
-    exercises: Exercise[];
-    objective: string;
-    date: string;
-  } | null>(null);
   const [saving, setSaving] = useState(false);
-  const [saveFeedback, setSaveFeedback] = useState<{ type: "info" | "success" | "error"; message: string } | null>(null);
-  const selectedFocusLabels = getSelectedWorkoutFocusLabels(objective);
-  const hasLegacyObjective = Boolean(objective.trim()) && selectedFocusLabels.length === 0;
-
-  const toggleWorkoutFocus = (focus: string) => {
-    const selectedSet = new Set(selectedFocusLabels);
-
-    if (selectedSet.has(focus)) {
-      selectedSet.delete(focus);
-    } else {
-      selectedSet.add(focus);
-    }
-
-    setObjective(formatWorkoutFocusObjective(Array.from(selectedSet)));
-  };
-
-  // Detectar se há dados não salvos
-  const hasCurrentExerciseData = !!(
-    currentExercise.name.trim() || 
-    currentExercise.sets.some(s => s.reps > 0 || s.weight > 0)
-  );
-  
-  const hasUnsavedChanges = !!(
-    objective.trim() ||
-    addedExercises.length > 0 ||
-    hasCurrentExerciseData ||
-    durationHours ||
-    durationMin ||
-    durationSec ||
-    calories
-  );
-
-  // Hook para bloquear navegação
-  const { isBlocked, proceed, reset } = useUnsavedChangesWarning({
-    hasUnsavedChanges
-  });
-
-  // Carregar rascunho ao montar
-  useEffect(() => {
-    const draft = loadDraft();
-    if (draft) {
-      setObjective(draft.objective || '');
-      if (draft.addedExercises && draft.addedExercises.length > 0) {
-        setAddedExercises(draft.addedExercises);
-      }
-      if (draft.currentExercise) {
-        setCurrentExercise(draft.currentExercise);
-      }
-      setDurationHours(draft.durationHours || '');
-      setDurationMin(draft.durationMin || '');
-      setDurationSec(draft.durationSec || '');
-      setCalories(draft.calories || '');
-      toast.info('Rascunho recuperado automaticamente');
-    }
-    setDraftLoaded(true);
-  }, [loadDraft]);
-
-  // Salvar automaticamente no localStorage
-  useEffect(() => {
-    if (!draftLoaded) return;
-    if (hasUnsavedChanges) {
-      saveDraft({
-        objective,
-        addedExercises,
-        currentExercise,
-        durationHours,
-        durationMin,
-        durationSec,
-        calories
-      });
-    }
-  }, [objective, addedExercises, currentExercise, durationHours, durationMin, durationSec, calories, hasUnsavedChanges, draftLoaded, saveDraft]);
-
-  // Função para validar input numérico com limite
-  const handleDurationInput = (value: string, maxValue: number, setter: (val: number | "") => void) => {
-    const numbersOnly = value.replace(/\D/g, "");
-    if (numbersOnly === "") {
-      setter("");
-      return;
-    }
-    const numValue = parseInt(numbersOnly, 10);
-    const clampedValue = Math.min(numValue, maxValue);
-    setter(clampedValue);
-  };
-
-  // Timer states
-  const [restTime, setRestTime] = useState(60);
+  const [saveFeedback, setSaveFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [restTime] = useState(60);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isResting, setIsResting] = useState(false);
   const [endTime, setEndTime] = useState<number | null>(null);
-  const [showTimerOverlay, setShowTimerOverlay] = useState(false);
-
-  // Wake Lock and Audio refs
-  const wakeLockRef = useRef<WakeLockSentinel | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
+  const [exercisePickerOpen, setExercisePickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerFilter, setPickerFilter] = useState<(typeof exerciseFilters)[number]>("Todos");
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>([]);
+  const [numpadTarget, setNumpadTarget] = useState<NumpadTarget | null>(null);
+  const [numpadValue, setNumpadValue] = useState("");
   const savePressLockRef = useRef(false);
 
-  // Request Wake Lock to prevent screen from locking
-  const requestWakeLock = async () => {
-    try {
-      if ("wakeLock" in navigator) {
-        wakeLockRef.current = await navigator.wakeLock.request("screen");
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setElapsedSeconds((current) => current + 1);
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setObjective(draft.objective || config.defaultFocus);
+      if (draft.addedExercises?.length) {
+        setAddedExercises(draft.addedExercises);
       }
-    } catch (err) {
-      console.log("Wake Lock não disponível");
+      setCalories(draft.calories || "");
+      toast.info("Rascunho recuperado automaticamente");
     }
-  };
+    setDraftLoaded(true);
+  }, [config.defaultFocus, loadDraft]);
 
-  // Release Wake Lock
-  const releaseWakeLock = () => {
-    if (wakeLockRef.current) {
-      wakeLockRef.current.release();
-      wakeLockRef.current = null;
-    }
-  };
+  const hasUnsavedChanges = Boolean(objective.trim() || addedExercises.length > 0 || calories);
 
-  // Play alarm sound when timer ends
-  const playAlarmSound = () => {
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
+  useEffect(() => {
+    if (!draftLoaded) return;
+    if (!hasUnsavedChanges) return;
 
-      // Play 3 beeps
-      [0, 0.15, 0.3].forEach((delay) => {
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
+    saveDraft({
+      objective,
+      addedExercises,
+      calories,
+    });
+  }, [addedExercises, calories, draftLoaded, hasUnsavedChanges, objective, saveDraft]);
 
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-
-        oscillator.frequency.value = 880;
-        oscillator.type = "sine";
-
-        gainNode.gain.setValueAtTime(0.5, ctx.currentTime + delay);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + delay + 0.1);
-
-        oscillator.start(ctx.currentTime + delay);
-        oscillator.stop(ctx.currentTime + delay + 0.1);
-      });
-    } catch (e) {
-      console.log("Audio não disponível");
-    }
-  };
-
-  // Timer effect using timestamps for accuracy
   useEffect(() => {
     if (!endTime) return;
 
-    const updateTimer = () => {
+    const updateRest = () => {
       const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
       setTimeLeft(remaining);
 
       if (remaining <= 0) {
         setIsResting(false);
         setEndTime(null);
-        setShowTimerOverlay(false);
-        releaseWakeLock();
-
-        // Sound + vibration + toast
-        playAlarmSound();
-        if ("vibrate" in navigator) navigator.vibrate([200, 100, 200, 100, 200]);
-        toast.success("Descanso finalizado! 💪");
+        if ("vibrate" in navigator) navigator.vibrate([120, 80, 120]);
       }
     };
 
-    updateTimer();
-    const interval = setInterval(updateTimer, 100);
-
-    return () => clearInterval(interval);
+    updateRest();
+    const interval = window.setInterval(updateRest, 250);
+    return () => window.clearInterval(interval);
   }, [endTime]);
 
-  const startRest = async () => {
+  const { isBlocked, proceed, reset } = useUnsavedChangesWarning({
+    hasUnsavedChanges,
+  });
+
+  const totalCompletedSets = addedExercises.reduce((sum, exercise) => sum + getCompletedSets(exercise).length, 0);
+  const totalSets = addedExercises.reduce((sum, exercise) => sum + exercise.sets.length, 0);
+  const maxWeight = getMaxWeight(addedExercises);
+  const completedExerciseCount = addedExercises.filter((exercise) => getCompletedSets(exercise).length > 0).length;
+  const title = `${objective || config.defaultFocus} — Treino livre`;
+  const selectedIds = new Set(selectedExerciseIds);
+
+  const filteredCatalog = useMemo(() => {
+    const query = pickerQuery.trim().toLowerCase();
+
+    return exerciseCatalog.filter((exercise) => {
+      const matchesFilter = pickerFilter === "Todos" || exercise.category === pickerFilter;
+      const matchesQuery = !query || `${exercise.name} ${exercise.group} ${exercise.category}`.toLowerCase().includes(query);
+      return matchesFilter && matchesQuery;
+    });
+  }, [pickerFilter, pickerQuery]);
+
+  const startRest = () => {
     setEndTime(Date.now() + restTime * 1000);
     setTimeLeft(restTime);
     setIsResting(true);
-    setShowTimerOverlay(true);
-    await requestWakeLock();
   };
 
-  const stopRest = () => {
-    setIsResting(false);
-    setEndTime(null);
-    setTimeLeft(0);
-    setShowTimerOverlay(false);
-    releaseWakeLock();
-  };
+  const openNumpad = (target: NumpadTarget) => {
+    setNumpadTarget(target);
 
-  // Adicionar exercício atual à lista
-  const handleAddCurrentExercise = () => {
-    const exerciseToAdd = normalizeExercise(currentExercise);
-
-    if (!exerciseToAdd.name) {
-      toast.error("Informe o nome do exercício");
+    if (target.kind === "calories") {
+      setNumpadValue(calories ? String(calories) : "");
       return;
     }
 
-    if (exerciseToAdd.sets.length === 0) {
-      toast.error("Informe pelo menos uma série com repetições");
+    const set = addedExercises[target.exerciseIndex]?.sets[target.setIndex];
+    const value = target.field === "weight" ? set?.weight : set?.reps;
+    setNumpadValue(value ? String(value) : "");
+  };
+
+  const closeNumpad = () => {
+    setNumpadTarget(null);
+    setNumpadValue("");
+  };
+
+  const confirmNumpad = () => {
+    if (!numpadTarget) return;
+    const numericValue = Number(numpadValue.replace(",", "."));
+
+    if (numpadTarget.kind === "calories") {
+      setCalories(Number.isFinite(numericValue) && numericValue > 0 ? Math.round(numericValue) : "");
+      closeNumpad();
       return;
     }
 
-    if (exerciseToAdd.sets.some((set) => set.reps <= 0)) {
-      toast.error("Cada série preenchida precisa ter pelo menos 1 repetição");
-      return;
-    }
+    setAddedExercises((current) =>
+      current.map((exercise, exerciseIndex) => {
+        if (exerciseIndex !== numpadTarget.exerciseIndex) return exercise;
 
-    if (editingIndex !== null) {
-      // Modo edição: atualizar exercício existente
-      const updated = [...addedExercises];
-      updated[editingIndex] = exerciseToAdd;
-      setAddedExercises(updated);
-      setEditingIndex(null);
-      toast.success("Exercício atualizado!");
-    } else {
-      // Modo novo: adicionar à lista
-      setAddedExercises([...addedExercises, exerciseToAdd]);
-      toast.success("Exercício adicionado!");
-    }
-
-    // Limpar formulário
-    setCurrentExercise({
-      name: "",
-      sets: [
-        { reps: 0, weight: 0 },
-        { reps: 0, weight: 0 },
-        { reps: 0, weight: 0 },
-      ],
-    });
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set, setIndex) => {
+            if (setIndex !== numpadTarget.setIndex) return set;
+            return {
+              ...set,
+              [numpadTarget.field]: numpadTarget.field === "reps" ? Math.round(numericValue) || 0 : numericValue || 0,
+            };
+          }),
+        };
+      }),
+    );
+    closeNumpad();
   };
 
-  // Editar exercício já adicionado
-  const handleEditExercise = (index: number) => {
-    setCurrentExercise({ ...addedExercises[index] });
-    setEditingIndex(index);
+  const handleNumpadInput = (value: string) => {
+    if (value === "." && numpadValue.includes(".")) return;
+    if (numpadValue.length >= 6) return;
+    setNumpadValue((current) => `${current}${value}`);
   };
 
-  // Remover exercício da lista
-  const handleRemoveExercise = (index: number) => {
-    setAddedExercises(addedExercises.filter((_, i) => i !== index));
-    if (editingIndex === index) {
-      setEditingIndex(null);
-      setCurrentExercise({ ...emptyExercise });
-    }
+  const addSeries = (exerciseIndex: number) => {
+    setAddedExercises((current) =>
+      current.map((exercise, index) =>
+        index === exerciseIndex
+          ? {
+              ...exercise,
+              previous: [...(exercise.previous || []), "—"],
+              sets: [...exercise.sets, { weight: 0, reps: 0, completed: false }],
+            }
+          : exercise,
+      ),
+    );
+  };
+
+  const toggleSetCompleted = (exerciseIndex: number, setIndex: number) => {
+    setAddedExercises((current) =>
+      current.map((exercise, index) => {
+        if (index !== exerciseIndex) return exercise;
+
+        return {
+          ...exercise,
+          sets: exercise.sets.map((set, currentSetIndex) =>
+            currentSetIndex === setIndex
+              ? {
+                  ...set,
+                  completed: !set.completed,
+                }
+              : set,
+          ),
+        };
+      }),
+    );
+
+    const targetSet = addedExercises[exerciseIndex]?.sets[setIndex];
+    if (!targetSet?.completed) startRest();
+  };
+
+  const removeExercise = (exerciseIndex: number) => {
+    setAddedExercises((current) => current.filter((_, index) => index !== exerciseIndex));
     toast.success("Exercício removido");
   };
 
-  // Cancelar edição
-  const handleCancelEdit = () => {
-    setEditingIndex(null);
-    setCurrentExercise({ ...emptyExercise });
+  const openExercisePicker = () => {
+    const ids = addedExercises
+      .map((exercise) => exerciseCatalog.find((item) => item.name === exercise.name)?.id)
+      .filter(Boolean) as string[];
+    setSelectedExerciseIds(ids);
+    setExercisePickerOpen(true);
   };
 
-  // Buscar último treino similar
-  const handleRepeatLastWorkout = async () => {
-    if (!user) return;
+  const confirmExerciseSelection = () => {
+    const existingByName = new Map(addedExercises.map((exercise) => [exercise.name, exercise]));
+    const selectedExercises = exerciseCatalog
+      .filter((item) => selectedExerciseIds.includes(item.id))
+      .map((item) => existingByName.get(item.name) || createExerciseFromCatalog(item));
 
-    const searchTerm = objective.trim();
-    
-    setLoadingLastWorkout(true);
-    try {
-      const workouts = await fetchStrengthWorkouts();
-      const filteredWorkouts = workouts
-        .filter((workout) => workout.workout_type === type)
-        .filter((workout) =>
-          searchTerm
-            ? workout.objective.toLowerCase().includes(searchTerm.toLowerCase())
-            : true,
-        )
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      if (filteredWorkouts.length === 0) {
-        toast.error(searchTerm 
-          ? `Nenhum treino de "${searchTerm}" encontrado` 
-          : "Nenhum treino anterior encontrado"
-        );
-        return;
-      }
-
-      const workout = filteredWorkouts[0];
-      const exercises = workout.exercises || [];
-
-      if (exercises.length === 0) {
-        toast.error("O treino encontrado não tem exercícios");
-        return;
-      }
-
-      // Se já tem exercícios, perguntar antes
-      if (addedExercises.length > 0) {
-        setPendingWorkoutToLoad({
-          exercises,
-          objective: workout.objective,
-          date: workout.date,
-        });
-        setConfirmReplaceDialog(true);
-      } else {
-        loadWorkoutExercises(exercises, workout.objective, workout.date);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar treino:", error);
-      toast.error("Erro ao buscar treino anterior");
-    } finally {
-      setLoadingLastWorkout(false);
-    }
+    setAddedExercises(selectedExercises);
+    setExercisePickerOpen(false);
   };
 
-  // Carregar exercícios de um treino
-  const loadWorkoutExercises = (exercises: Exercise[], workoutObjective: string, dateStr: string) => {
-    const exercisesToLoad = exercises.map((ex) => ({
-      name: ex.name,
-      sets: ex.sets.map((s) => ({
-        reps: s.reps,
-        weight: s.weight,
-      })),
-    }));
-
-    setAddedExercises(exercisesToLoad);
-    if (!objective.trim()) {
-      setObjective(workoutObjective);
-    }
-
-    const formattedDate = formatDateSafe(dateStr, "dd/MM", {
-      locale: ptBR,
-      noon: true,
-      fallback: "data anterior",
-    });
-    toast.success(`Carregado treino de ${formattedDate} com ${exercisesToLoad.length} exercícios`);
-  };
-
-  // Callback do modal de treinos anteriores
-  const handleSelectPreviousWorkout = (workout: { exercises: Exercise[]; objective: string; date: string }) => {
-    if (addedExercises.length > 0) {
-      setPendingWorkoutToLoad({
-        exercises: workout.exercises,
-        objective: workout.objective,
-        date: workout.date,
-      });
-      setConfirmReplaceDialog(true);
-    } else {
-      loadWorkoutExercises(workout.exercises, workout.objective, workout.date);
-    }
-  };
-
-  // Confirmar substituição de exercícios
-  const handleConfirmReplace = () => {
-    if (pendingWorkoutToLoad) {
-      loadWorkoutExercises(
-        pendingWorkoutToLoad.exercises,
-        pendingWorkoutToLoad.objective,
-        pendingWorkoutToLoad.date
-      );
-    }
-    setPendingWorkoutToLoad(null);
-    setConfirmReplaceDialog(false);
-  };
-
-  const handleSaveWorkout = async () => {
+  const handleSaveWorkout = async (durationMinutes: number) => {
     setSaveFeedback(null);
 
     if (!user) {
@@ -508,76 +477,30 @@ export default function WorkoutForm() {
       return false;
     }
 
-    const workoutObjective = objective.trim();
-    if (!workoutObjective) {
-      const message = "Selecione o foco do treino";
+    const workoutObjective = objective.trim() || config.defaultFocus;
+    const exercisesToSave = addedExercises.map(normalizeExercise).filter((exercise) => exercise.name && exercise.sets.length > 0);
+
+    if (exercisesToSave.length === 0) {
+      const message = "Complete ao menos uma série antes de finalizar";
       setSaveFeedback({ type: "error", message });
       toast.error(message);
       return false;
     }
-
-    let exercisesForSave = addedExercises.map(normalizeExercise);
-
-    if (hasCurrentExerciseData) {
-      const currentExerciseForSave = normalizeExercise(currentExercise);
-      const currentExerciseIsComplete =
-        currentExerciseForSave.name &&
-        currentExerciseForSave.sets.length > 0 &&
-        currentExerciseForSave.sets.every((set) => set.reps > 0);
-
-      if (currentExerciseIsComplete && editingIndex !== null) {
-        exercisesForSave = exercisesForSave.map((exercise, index) =>
-          index === editingIndex ? currentExerciseForSave : exercise,
-        );
-      } else if (currentExerciseIsComplete) {
-        exercisesForSave = [...exercisesForSave, currentExerciseForSave];
-      } else if (addedExercises.length === 0) {
-        const message = "Complete o exercício em aberto antes de salvar";
-        setSaveFeedback({ type: "error", message });
-        toast.error(message);
-        return false;
-      }
-    }
-
-    if (exercisesForSave.length === 0) {
-      const message = "Adicione pelo menos um exercício";
-      setSaveFeedback({ type: "error", message });
-      toast.error(message);
-      return false;
-    }
-
-    const exercisesToSave = exercisesForSave.map((exercise) => ({
-      name: exercise.name,
-      sets: exercise.sets,
-    }));
-
-    const invalidExercise = exercisesToSave.find(
-      (exercise) => !exercise.name || exercise.sets.length === 0 || exercise.sets.some((set) => set.reps <= 0),
-    );
-
-    if (invalidExercise) {
-      const message = "Revise os exercícios: cada série precisa ter pelo menos 1 repetição.";
-      setSaveFeedback({ type: "error", message });
-      toast.error(message);
-      return false;
-    }
-
-    const totalMinutes =
-      (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
-    const durationMinutes = totalMinutes > 0 ? Math.max(1, Math.round(totalMinutes)) : null;
 
     setSaving(true);
     try {
-      const workoutData = {
-        date: today.toISOString().split("T")[0],
+      const response = await api.post<{ workout?: { id?: string } }>("/workouts/strength", {
+        date: new Date().toISOString().split("T")[0],
         objective: workoutObjective,
         duration_min: durationMinutes,
         calories: calories || null,
-        exercises: exercisesToSave as unknown,
+        exercises: exercisesToSave.map((exercise) => ({
+          name: exercise.name,
+          sets: exercise.sets,
+        })),
         workout_type: type,
-      };
+      });
 
-      const response = await api.post<{ workout?: { id?: string } }>('/workouts/strength', workoutData);
       if (!response.workout?.id) {
         throw new Error("A API nao confirmou o treino salvo");
       }
@@ -585,511 +508,422 @@ export default function WorkoutForm() {
       toast.success("Treino salvo com sucesso!");
       setSaveFeedback({ type: "success", message: "Treino salvo com sucesso." });
       clearDraft();
-      setObjective("");
-      setAddedExercises([]);
-      setCurrentExercise({ ...emptyExercise });
-      setEditingIndex(null);
-      setDurationHours("");
-      setDurationMin("");
-      setDurationSec("");
-      setCalories("");
       return true;
     } catch (error: any) {
-      const message = error.message || '';
-      let userMessage = '';
-      
-      if (error?.name === 'AbortError') {
-        userMessage = 'O salvamento demorou demais para responder. Verifique sua conexão e tente novamente.';
-      } else if (message.includes('Load Failed') || 
-          message.includes('NetworkError') ||
-          message.includes('fetch') ||
-          message.includes('network')) {
-        userMessage = 'Erro de conexão. O rascunho ficou salvo no aparelho. Tente novamente.';
-      } else {
-        userMessage = `Não foi possível salvar o treino: ${message || 'tente novamente em alguns instantes'}`;
-      }
-      setSaveFeedback({ type: "error", message: userMessage });
-      toast.error(userMessage);
+      const message = `Não foi possível salvar o treino: ${error?.message || "tente novamente em alguns instantes"}`;
+      setSaveFeedback({ type: "error", message });
+      toast.error(message);
       return false;
     } finally {
       setSaving(false);
     }
   };
 
-  // Função para salvar e navegar (usado no dialog de alterações não salvas)
-  const handleSaveAndNavigate = async () => {
-    const saved = await handleSaveWorkout();
-    if (saved) {
-      proceed();
-    }
-  };
-
-  // Função para descartar e navegar (usado no dialog de alterações não salvas)
-  const handleDiscardAndNavigate = () => {
-    clearDraft();
-    proceed();
-  };
-
-  const formatTimerDisplay = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${String(secs).padStart(2, "0")}`;
-  };
-
-  const totalSets = addedExercises.reduce((total, exercise) => total + getFilledSets(exercise.sets).length, 0);
-  const totalMinutesPreview =
-    (Number(durationHours) || 0) * 60 + (Number(durationMin) || 0) + (Number(durationSec) || 0) / 60;
-  const saveExerciseCount = addedExercises.length + (hasCurrentExerciseData && editingIndex === null ? 1 : 0);
-  const saveButtonLabel = saving ? "Salvando..." : `Salvar Treino (${saveExerciseCount} exercícios)`;
-  const saveDisabled = saving || (addedExercises.length === 0 && !hasCurrentExerciseData);
-  const saveFeedbackClassName =
-    saveFeedback?.type === "success"
-      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-      : saveFeedback?.type === "info"
-        ? "border-primary/30 bg-primary/10 text-primary"
-        : "border-destructive/30 bg-destructive/10 text-destructive";
-
-  const handleSaveButtonPress = () => {
-    if (saveDisabled || savePressLockRef.current) return;
+  const finishWorkout = () => {
+    if (saving || savePressLockRef.current) return;
 
     savePressLockRef.current = true;
-    void handleSaveWorkout().finally(() => {
+    const durationMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
+    void handleSaveWorkout(durationMinutes).then((saved) => {
+      if (saved) navigate("/workouts");
+    }).finally(() => {
       window.setTimeout(() => {
         savePressLockRef.current = false;
       }, 300);
     });
   };
 
-  return (
-    <div className="min-h-full overflow-x-hidden bg-[linear-gradient(180deg,hsl(var(--background))_0%,hsl(var(--background-strong))_100%)]">
-      <div className="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+8rem)] pt-2 sm:px-4 md:px-7 md:pb-8 md:pt-7">
-      <header className="sticky top-0 z-50 -mx-3 flex h-14 items-center justify-center border-b border-white/5 bg-background/90 px-3 backdrop-blur md:hidden">
-        <Link
-          to="/workouts"
-          className="absolute left-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
-          aria-label="Voltar"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="text-base font-bold">{config.label}</h1>
-        <button
-          type="button"
-          onClick={() => setShowPreviousWorkouts(true)}
-          className="absolute right-0 flex h-10 w-10 items-center justify-center rounded-full bg-card/85 text-muted-foreground shadow-elegant hover:text-foreground"
-          aria-label="Treinos anteriores"
-        >
-          <History className="h-5 w-5" />
-        </button>
-      </header>
+  const handleSaveAndNavigate = async () => {
+    const saved = await handleSaveWorkout(Math.max(1, Math.round(elapsedSeconds / 60)));
+    if (saved) proceed();
+  };
 
-      <section className="overflow-hidden rounded-[2rem] border border-white/5 bg-card/90 shadow-elegant">
-        <div className="relative min-h-[220px] p-6 md:min-h-[260px] md:p-7">
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-35"
-            style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-background/40 via-background/78 to-background" />
-          <div className="relative flex h-full flex-col gap-6 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl space-y-4">
-              <Link
-                to="/workouts"
-                className="hidden h-11 w-11 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-colors hover:text-foreground md:inline-flex"
-                aria-label="Voltar"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Link>
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                <CalendarCheck className="h-4 w-4" />
-                {getDayOfWeek(today)}, {formatDate(today)}
-              </div>
-              <div>
-                <h1 className="hidden text-4xl font-bold leading-tight tracking-normal md:block md:text-5xl">
-                  {config.label}
-                </h1>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground md:text-lg">
-                  Monte o treino do dia, repita treinos anteriores e salve seu progresso em poucos passos.
-                </p>
-              </div>
-            </div>
+  const handleDiscardAndNavigate = () => {
+    clearDraft();
+    proceed();
+  };
 
-            <div className="grid grid-cols-3 gap-3 md:w-[360px]">
-              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
-                <ListChecks className="mb-2 h-5 w-5 text-primary" />
-                <p className="text-2xl font-bold">{addedExercises.length}</p>
-                <p className="text-xs text-muted-foreground">exercícios</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
-                <Dumbbell className="mb-2 h-5 w-5 text-primary" />
-                <p className="text-2xl font-bold">{totalSets}</p>
-                <p className="text-xs text-muted-foreground">séries</p>
-              </div>
-              <div className="rounded-2xl border border-white/10 bg-background/45 p-3 backdrop-blur">
-                <Clock className="mb-2 h-5 w-5 text-primary" />
-                <p className="text-2xl font-bold">{Math.round(totalMinutesPreview) || "--"}</p>
-                <p className="text-xs text-muted-foreground">min</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="flex gap-3 overflow-x-auto pb-1">
-        {[
-          { label: "Hoje", active: true },
-          { label: hasUnsavedChanges ? "Rascunho salvo" : "Sem rascunho", active: hasUnsavedChanges },
-          { label: `${addedExercises.length} exercícios`, active: addedExercises.length > 0 },
-        ].map((chip) => (
-          <span
-            key={chip.label}
-            className={`shrink-0 rounded-xl border px-4 py-2 text-sm font-semibold ${
-              chip.active
-                ? "border-primary/35 bg-primary/15 text-primary"
-                : "border-white/5 bg-card/70 text-muted-foreground"
-            }`}
-          >
-            {chip.label}
-          </span>
-        ))}
-      </section>
-
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="min-w-0 space-y-6">
-      {/* Workout Form */}
-      <div className="rounded-[2rem] border border-white/5 bg-card/85 p-5 shadow-elegant space-y-5">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-primary/15 rounded-2xl flex items-center justify-center">
-            <IconComponent className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <Label className="text-lg font-semibold">Foco do treino</Label>
-            <p className="text-sm text-muted-foreground">Grupos musculares</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {workoutFocusOptions.map((focus) => {
-            const selected = selectedFocusLabels.includes(focus);
-
-            return (
-              <button
-                key={focus}
-                type="button"
-                onClick={() => toggleWorkoutFocus(focus)}
-                className={`flex min-h-11 items-center justify-center rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  selected
-                    ? "border-primary/45 bg-primary/15 text-primary"
-                    : "border-white/5 bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"
-                }`}
-              >
-                {focus}
-              </button>
-            );
-          })}
-        </div>
-        {(objective || hasLegacyObjective) && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-background/30 px-3 py-2">
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">
-              {objective || "Nenhum foco selecionado"}
-            </span>
+  if (exercisePickerOpen) {
+    return (
+      <div className="min-h-full bg-[hsl(var(--background))]">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-40 pt-6">
+          <header className="grid grid-cols-[42px_1fr_64px] items-center gap-3">
             <button
               type="button"
-              onClick={() => setObjective("")}
-              className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+              onClick={() => setExercisePickerOpen(false)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary text-primary"
+              aria-label="Voltar"
             >
-              Limpar
+              <ArrowLeft className="h-5 w-5" />
             </button>
-          </div>
-        )}
+            <h1 className="text-center text-xl font-black">Exercícios</h1>
+            <button type="button" className="text-right text-sm font-black text-primary">
+              + Criar
+            </button>
+          </header>
 
-        {/* Botões de Repetir Treino */}
-        <div className="grid gap-2 sm:grid-cols-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleRepeatLastWorkout}
-            disabled={loadingLastWorkout}
-            className="h-12 rounded-xl border-white/10 bg-background/30"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            {loadingLastWorkout ? "Buscando..." : "Repetir último"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setShowPreviousWorkouts(true)}
-            className="h-12 rounded-xl border-white/10 bg-background/30"
-          >
-            <History className="w-4 h-4 mr-2" />
-            Ver anteriores
-          </Button>
-        </div>
-
-        <div className="border-t border-white/10" />
-
-        {/* Lista de Exercícios Adicionados */}
-        {addedExercises.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-muted-foreground">
-                Exercícios adicionados ({addedExercises.length})
-              </Label>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {totalSets} séries
-              </span>
-            </div>
-            <div className="space-y-2">
-              {addedExercises.map((exercise, index) => (
-                <AddedExerciseCard
-                  key={index}
-                  exercise={exercise}
-                  index={index}
-                  onEdit={handleEditExercise}
-                  onRemove={handleRemoveExercise}
-                />
-              ))}
-            </div>
-            <div className="border-t border-white/10" />
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onPointerUp={handleSaveButtonPress}
-              onClick={handleSaveButtonPress}
-              disabled={saveDisabled}
-              className="flex h-14 w-full items-center justify-center rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow transition-opacity hover:opacity-95 disabled:pointer-events-none disabled:opacity-50 lg:hidden"
+              onClick={() => setObjective(config.defaultFocus)}
+              className="inline-flex h-9 items-center gap-2 rounded-full border border-primary bg-primary/10 px-4 text-xs font-black text-primary"
             >
-              {saveButtonLabel}
+              <X className="h-3 w-3" />
+              {objective || config.defaultFocus}
             </button>
-            {saveFeedback && (
-              <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${saveFeedbackClassName}`}>
-                {saveFeedback.message}
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Formulário para Novo Exercício */}
-        <div className="rounded-2xl bg-secondary/35 p-3">
-          <ExerciseInputForm
-            currentExercise={currentExercise}
-            onExerciseChange={setCurrentExercise}
-            onAddExercise={handleAddCurrentExercise}
-            onCancelEdit={handleCancelEdit}
-            isEditing={editingIndex !== null}
-          />
-        </div>
-
-        {/* Rest Timer Settings */}
-        <div className="rounded-2xl border border-white/5 bg-background/30 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Descanso entre séries</span>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Select
-                value={restTime.toString()}
-                onValueChange={(value) => setRestTime(Number(value))}
-                disabled={isResting}
-              >
-                <SelectTrigger className="h-10 w-[92px] rounded-xl border-white/10 bg-secondary/70 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30s</SelectItem>
-                  <SelectItem value="45">45s</SelectItem>
-                  <SelectItem value="60">1min</SelectItem>
-                  <SelectItem value="90">1:30</SelectItem>
-                  <SelectItem value="120">2min</SelectItem>
-                  <SelectItem value="180">3min</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                size="sm"
-                onClick={startRest}
-                disabled={isResting}
-                className="h-10 rounded-xl bg-accent px-3 text-accent-foreground hover:bg-accent/90"
-              >
-                Iniciar
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-        </div>
-
-        <aside className="min-w-0 space-y-4 lg:sticky lg:top-6 lg:self-start">
-      {/* Workout Summary */}
-      <div className="space-y-4 rounded-[1.5rem] border border-white/5 bg-card/85 p-4 shadow-elegant sm:rounded-[2rem] sm:p-5">
-        <div>
-          <h2 className="text-lg font-semibold">Resumo do treino</h2>
-          <p className="text-sm text-muted-foreground">Complete antes de salvar no histórico.</p>
-        </div>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-accent" />
-              <Label className="text-sm">Duração</Label>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div className="relative">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  maxLength={2}
-                  value={durationHours === "" ? "" : durationHours}
-                  onChange={(e) => handleDurationInput(e.target.value, 23, setDurationHours)}
-                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-6 text-center focus-visible:ring-offset-0"
-                />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">h</span>
-              </div>
-              <div className="relative">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  maxLength={2}
-                  value={durationMin === "" ? "" : durationMin}
-                  onChange={(e) => handleDurationInput(e.target.value, 59, setDurationMin)}
-                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-7 text-center focus-visible:ring-offset-0"
-                />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">min</span>
-              </div>
-              <div className="relative col-span-2 sm:col-span-1">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="0"
-                  maxLength={2}
-                  value={durationSec === "" ? "" : durationSec}
-                  onChange={(e) => handleDurationInput(e.target.value, 59, setDurationSec)}
-                  className="h-12 rounded-xl border-white/5 bg-secondary/70 pr-6 text-center focus-visible:ring-offset-0"
-                />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">s</span>
-              </div>
-            </div>
+            <span className="text-xs text-muted-foreground">24 exercícios</span>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Flame className="w-4 h-4 text-accent" />
-              <Label className="text-sm">Calorias</Label>
-            </div>
-            <Input
-              type="text"
-              inputMode="numeric"
-              placeholder="0"
-              maxLength={5}
-              value={calories}
-              onChange={(e) => {
-                const value = e.target.value.replace(/[^0-9]/g, '');
-                setCalories(value ? Number(value) : "");
-              }}
-              className="h-12 rounded-xl border-white/5 bg-secondary/70 focus-visible:ring-offset-0"
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={pickerQuery}
+              onChange={(event) => setPickerQuery(event.target.value)}
+              placeholder="Pesquisar exercício..."
+              className="h-12 w-full rounded-xl border border-white/10 bg-card pl-11 pr-4 text-sm font-semibold outline-none placeholder:text-muted-foreground focus:border-primary"
             />
           </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            {exerciseFilters.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setPickerFilter(filter)}
+                className={`h-9 shrink-0 rounded-full border px-4 text-xs font-black transition-colors ${
+                  pickerFilter === filter
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-white/10 bg-card text-muted-foreground"
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+
+          <section className="grid grid-cols-2 gap-3">
+            {filteredCatalog.map((exercise) => {
+              const selected = selectedIds.has(exercise.id);
+
+              return (
+                <button
+                  key={exercise.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedExerciseIds((current) =>
+                      current.includes(exercise.id)
+                        ? current.filter((id) => id !== exercise.id)
+                        : [...current, exercise.id],
+                    );
+                  }}
+                  className={`relative overflow-hidden rounded-[1rem] border bg-card text-left shadow-elegant transition-transform hover:-translate-y-0.5 ${
+                    selected ? "border-primary" : "border-white/10"
+                  }`}
+                >
+                  <ExerciseIllustration tone={exercise.tone} />
+                  <span className={`absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full ${
+                    selected ? "bg-primary text-primary-foreground" : "bg-primary/15 text-primary/50"
+                  }`}>
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="p-3">
+                    <span className="inline-flex rounded-full bg-primary/15 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-primary">
+                      {exercise.focus}
+                    </span>
+                    <h3 className="mt-3 text-sm font-black leading-tight text-foreground">{exercise.name}</h3>
+                    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                      <MetaIcon icon={Dumbbell}>{exercise.category}</MetaIcon>
+                      <MetaIcon icon={PersonStanding}>{exercise.location}</MetaIcon>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </section>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 rounded-2xl bg-secondary/45 p-3 text-center">
-          <div>
-            <p className="text-lg font-bold text-primary">{addedExercises.length}</p>
-            <p className="text-[11px] text-muted-foreground">exerc.</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-primary">{totalSets}</p>
-            <p className="text-[11px] text-muted-foreground">séries</p>
-          </div>
-          <div>
-            <p className="text-lg font-bold text-primary">{calories || "--"}</p>
-            <p className="text-[11px] text-muted-foreground">kcal</p>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          onClick={handleSaveButtonPress}
-          disabled={saveDisabled}
-          className="hidden h-14 w-full rounded-xl bg-gradient-primary text-base font-bold text-primary-foreground shadow-glow hover:opacity-95 lg:inline-flex"
-        >
-          {saveButtonLabel}
-        </Button>
-        {saveFeedback && (
-          <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${saveFeedbackClassName}`}>
-            {saveFeedback.message}
-          </p>
-        )}
-      </div>
-        </aside>
-      </div>
-
-      {/* Floating Timer Button */}
-      {!showTimerOverlay && isResting && (
         <button
           type="button"
-          onClick={() => {
-            setShowTimerOverlay(true);
-          }}
-          className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+6rem)] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all duration-300 lg:bottom-6 ${
-            isResting ? "bg-accent animate-pulse" : "bg-card border-2 border-accent hover:scale-110"
-          }`}
+          onClick={confirmExerciseSelection}
+          className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.6rem)] left-1/2 z-50 flex h-12 w-[calc(100%-2.5rem)] max-w-[390px] -translate-x-1/2 items-center justify-center gap-2 rounded-xl border border-white/10 bg-[hsl(var(--background-strong)/0.96)] text-sm font-black text-foreground shadow-elegant backdrop-blur"
         >
-          <span className="font-mono text-sm font-bold text-accent-foreground">{formatTimerDisplay(timeLeft)}</span>
+          <Plus className="h-5 w-5 text-primary" />
+          Adicionar ao treino — {selectedExerciseIds.length} exercício(s)
         </button>
-      )}
+      </div>
+    );
+  }
 
-      {/* Timer Overlay */}
-      {showTimerOverlay && isResting && (
-        <div className="fixed inset-0 bg-background/95 z-[100] flex flex-col items-center justify-center">
-          <p className="text-muted-foreground mb-6 text-lg">Descansando...</p>
-          <button
-            type="button"
-            onClick={stopRest}
-            className={`w-52 h-52 rounded-full flex items-center justify-center transition-all duration-300 shadow-2xl ${
-              timeLeft <= 3 ? "bg-destructive animate-pulse shadow-destructive/50" : "bg-accent shadow-accent/30"
-            }`}
-          >
-            <span
-              className={`text-6xl font-bold font-mono ${
-                timeLeft <= 3 ? "text-destructive-foreground" : "text-accent-foreground"
-              }`}
-            >
-              {formatTimerDisplay(timeLeft)}
+  return (
+    <div className="min-h-full bg-[hsl(var(--background))]">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col pb-[9.5rem]">
+        <div className="border-b border-white/10 bg-[linear-gradient(135deg,hsl(var(--card))_0%,hsl(var(--background-strong))_100%)] px-5 pb-4 pt-3">
+          <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+            <span>10:25</span>
+            <span className="flex items-center gap-1">
+              <span className="h-2 w-3 rounded-sm border border-muted-foreground/70" />
+              <span className="h-2 w-2 rounded-full border border-muted-foreground/70" />
             </span>
-          </button>
-          <p className="text-sm text-muted-foreground mt-6">Toque para parar</p>
+          </div>
 
-          {/* Quick time adjust buttons */}
-          <div className="flex gap-3 mt-8">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEndTime((prev) => (prev ? prev - 10000 : null))}
-              className="text-xs"
-            >
-              -10s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEndTime((prev) => (prev ? prev + 10000 : null))}
-              className="text-xs"
-            >
-              +10s
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEndTime((prev) => (prev ? prev + 30000 : null))}
-              className="text-xs"
-            >
-              +30s
-            </Button>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h1 className="min-w-0 truncate text-base font-black text-foreground">{title}</h1>
+            <Link to="/workouts" className="shrink-0 text-sm font-medium text-muted-foreground">
+              Cancelar
+            </Link>
+          </div>
+
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="font-mono text-[34px] font-black leading-none tracking-[0.12em] text-primary">
+                {formatTimerDisplay(elapsedSeconds)}
+              </p>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Tempo de treino</p>
+            </div>
+            <div className="flex shrink-0 gap-5 text-center">
+              <div>
+                <p className="text-lg font-black text-primary">{addedExercises.length}</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Exerc.</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-primary">{totalCompletedSets}</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Séries</p>
+              </div>
+              <div>
+                <p className="text-lg font-black text-primary">{maxWeight ? `${formatWeight(maxWeight)}kg` : "—"}</p>
+                <p className="text-[9px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Peso máx</p>
+              </div>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Dialog de alterações não salvas */}
+        {isResting ? (
+          <button
+            type="button"
+            onClick={() => {
+              setIsResting(false);
+              setEndTime(null);
+            }}
+            className="mx-5 mt-3 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-left"
+          >
+            <Repeat2 className="h-5 w-5 text-primary" />
+            <span className="flex-1 text-sm font-bold text-primary">Descansando...</span>
+            <span className="font-mono text-lg font-black text-primary">{formatTimerDisplay(timeLeft)}</span>
+          </button>
+        ) : null}
+
+        <main className="flex-1 overflow-y-auto px-5 py-3 hide-scrollbar">
+          <div className="space-y-3">
+            {addedExercises.map((exercise, exerciseIndex) => {
+              const max = getMaxWeight([exercise]);
+
+              return (
+                <section
+                  key={`${exercise.name}-${exerciseIndex}`}
+                  className={`overflow-hidden rounded-[1rem] border bg-card shadow-elegant ${
+                    exerciseIndex === addedExercises.length - 1 ? "border-primary/60" : "border-white/10"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 border-b border-white/5 px-4 py-3">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Dumbbell className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate text-sm font-black text-foreground">{exercise.name}</h2>
+                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{exercise.group || getExerciseMeta(exercise)?.group || objective}</p>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-black text-primary">
+                      Máx: {max ? `${formatWeight(max)}kg` : "—"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeExercise(exerciseIndex)}
+                      className="flex h-8 w-6 items-center justify-center text-muted-foreground"
+                      aria-label="Remover exercício"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-[34px_1fr_1fr_1fr_36px] gap-1 px-4 py-2 text-center text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+                    <span className="text-left">Série</span>
+                    <span>Peso kg</span>
+                    <span>Reps</span>
+                    <span>Anterior</span>
+                    <span />
+                  </div>
+
+                  {exercise.sets.map((set, setIndex) => {
+                    const isCurrent = !set.completed && exerciseIndex === addedExercises.length - 1;
+
+                    return (
+                      <div
+                        key={setIndex}
+                        className={`grid grid-cols-[34px_1fr_1fr_1fr_36px] items-center gap-1 px-4 py-2 ${
+                          isCurrent ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        <span className={`text-xs font-black ${isCurrent ? "text-primary" : "text-muted-foreground"}`}>{setIndex + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => openNumpad({ kind: "set", exerciseIndex, setIndex, field: "weight" })}
+                          className={`h-9 rounded-lg border text-sm font-black ${
+                            isCurrent ? "border-primary bg-background text-foreground" : "border-white/10 bg-secondary text-foreground"
+                          }`}
+                        >
+                          {formatWeight(set.weight)}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openNumpad({ kind: "set", exerciseIndex, setIndex, field: "reps" })}
+                          className={`h-9 rounded-lg border text-sm font-black ${
+                            isCurrent ? "border-primary bg-background text-foreground" : "border-white/10 bg-secondary text-foreground"
+                          }`}
+                        >
+                          {set.reps || "—"}
+                        </button>
+                        <span className="text-center text-[11px] font-bold text-muted-foreground/45">{exercise.previous?.[setIndex] || "—"}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleSetCompleted(exerciseIndex, setIndex)}
+                          className={`mx-auto flex h-8 w-8 items-center justify-center rounded-lg ${
+                            set.completed ? "bg-primary text-primary-foreground" : "border border-white/10 bg-secondary text-muted-foreground/50"
+                          }`}
+                          aria-label="Concluir série"
+                        >
+                          <Check className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+
+                  <button
+                    type="button"
+                    onClick={() => addSeries(exerciseIndex)}
+                    className="flex h-11 w-full items-center justify-center gap-2 border-t border-white/5 text-sm font-black text-primary"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar série
+                  </button>
+                </section>
+              );
+            })}
+
+            <button
+              type="button"
+              onClick={openExercisePicker}
+              className="flex h-14 w-full items-center justify-center gap-2 rounded-[1rem] border-2 border-dashed border-white/10 bg-card text-sm font-black text-muted-foreground"
+            >
+              <Plus className="h-5 w-5 text-primary" />
+              Adicionar exercício
+            </button>
+
+            <button
+              type="button"
+              className="flex h-11 w-full items-center gap-3 rounded-xl border border-white/10 bg-card px-4 text-sm text-muted-foreground/55"
+            >
+              <NotebookText className="h-4 w-4 text-muted-foreground" />
+              Adicionar nota ao treino...
+            </button>
+
+            <button
+              type="button"
+              onClick={() => openNumpad({ kind: "calories" })}
+              className="flex w-full items-center gap-4 rounded-[1rem] border border-white/10 bg-card p-4 text-left"
+            >
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Flame className="h-5 w-5" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-muted-foreground">Calorias gastas</span>
+                <span className="mt-2 flex items-center gap-2">
+                  <span className="inline-flex h-10 min-w-24 items-center justify-center rounded-lg bg-secondary px-4 text-xl font-black text-primary">
+                    {formatNumberValue(calories)}
+                  </span>
+                  <span className="text-sm font-bold text-muted-foreground">kcal</span>
+                </span>
+                <span className="mt-1 block text-[10px] text-muted-foreground/50">Informe pelo seu smartwatch ou estimativa</span>
+              </span>
+            </button>
+
+            {saveFeedback ? (
+              <p className={`rounded-xl border px-3 py-2 text-sm font-medium ${
+                saveFeedback.type === "success"
+                  ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                  : "border-destructive/30 bg-destructive/10 text-destructive"
+              }`}>
+                {saveFeedback.message}
+              </p>
+            ) : null}
+          </div>
+        </main>
+      </div>
+
+      <footer className="fixed bottom-0 left-1/2 z-50 w-full max-w-[430px] -translate-x-1/2 border-t border-white/10 bg-[hsl(var(--background-strong)/0.98)] px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3 backdrop-blur">
+        <button
+          type="button"
+          onClick={finishWorkout}
+          disabled={saving}
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-white/15 bg-transparent text-sm font-black text-foreground disabled:opacity-60"
+        >
+          <Flag className="h-5 w-5" />
+          {saving ? "Finalizando..." : "Finalizar treino"}
+        </button>
+        <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1">
+          <MetaIcon icon={Repeat2}>{formatTimerDisplay(elapsedSeconds)}</MetaIcon>
+          <MetaIcon icon={Trophy}>Máx: {maxWeight ? `${formatWeight(maxWeight)}kg` : "—"}</MetaIcon>
+          <MetaIcon icon={Repeat2}>{totalCompletedSets || totalSets} séries</MetaIcon>
+          <MetaIcon icon={Flame}>{formatNumberValue(calories)} kcal</MetaIcon>
+        </div>
+      </footer>
+
+      {numpadTarget ? (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60" onClick={closeNumpad}>
+          <div
+            className="w-full max-w-[430px] rounded-t-[1.5rem] border border-white/10 bg-card px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] pt-5"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-secondary" />
+            <p className="text-center text-xs font-semibold text-muted-foreground">
+              {numpadTarget.kind === "calories"
+                ? "Calorias gastas (kcal)"
+                : numpadTarget.field === "weight"
+                  ? "Peso (kg)"
+                  : "Repetições"}
+            </p>
+            <p className="my-4 min-h-12 text-center font-mono text-4xl font-black text-primary">
+              {numpadValue || "0"}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => handleNumpadInput(value)}
+                  className="h-14 rounded-xl border border-white/10 bg-secondary text-xl font-black text-foreground"
+                >
+                  {value}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setNumpadValue((current) => current.slice(0, -1))}
+                className="flex h-14 items-center justify-center rounded-xl border border-white/10 bg-secondary text-primary"
+              >
+                <Delete className="h-5 w-5" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={confirmNumpad}
+              className="mt-3 h-12 w-full rounded-xl bg-primary text-sm font-black text-primary-foreground"
+            >
+              Confirmar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <UnsavedChangesDialog
         open={isBlocked}
         onDiscard={handleDiscardAndNavigate}
@@ -1097,36 +931,6 @@ export default function WorkoutForm() {
         onContinue={reset}
         saving={saving}
       />
-
-      {/* Modal de Treinos Anteriores */}
-      <PreviousWorkoutsModal
-        open={showPreviousWorkouts}
-        onClose={() => setShowPreviousWorkouts(false)}
-        onSelectWorkout={handleSelectPreviousWorkout}
-        workoutType={type}
-      />
-
-      {/* Dialog de Confirmar Substituição */}
-      <AlertDialog open={confirmReplaceDialog} onOpenChange={setConfirmReplaceDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Substituir exercícios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Você já tem {addedExercises.length} exercício(s) adicionado(s). 
-              Deseja substituir pelos exercícios do treino anterior?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingWorkoutToLoad(null)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmReplace}>
-              Substituir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      </div>
     </div>
   );
 }
