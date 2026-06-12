@@ -1,33 +1,26 @@
 import { NavLink } from 'react-router-dom';
-import { Dumbbell, HeartPulse, Home, Shield, TrendingUp, User } from 'lucide-react';
+import { Dumbbell, HeartPulse, Home, TrendingUp, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useIsAdmin } from '@/hooks/useAdmin';
 
 const baseNavItems = [
   { to: '/', icon: Home, label: 'Início' },
-  { to: '/body-progress', icon: TrendingUp, label: 'Evolução' },
   { to: '/workouts', icon: Dumbbell, label: 'Treinos' },
+  { to: '/body-progress', icon: TrendingUp, label: 'Evolução' },
   { to: '/appointments', icon: HeartPulse, label: 'Saúde' },
   { to: '/profile', icon: User, label: 'Perfil' },
 ];
 
 export function BottomNav() {
-  const { data: isAdmin } = useIsAdmin();
-
-  const navItems = isAdmin
-    ? [...baseNavItems, { to: '/admin', icon: Shield, label: 'Admin' }]
-    : baseNavItems;
-
   return (
-    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-background/70 px-3 pb-2 backdrop-blur-xl md:hidden">
-      <div className="mx-auto flex h-[72px] max-w-[430px] items-center justify-around rounded-[1.6rem] border border-white/5 bg-card/95 px-2 shadow-elegant">
-        {navItems.map((item) => (
+    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-[hsl(var(--background-strong)/0.96)] px-3 backdrop-blur-xl md:hidden">
+      <div className="mx-auto flex h-16 max-w-[430px] items-center justify-around">
+        {baseNavItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             className={({ isActive }) =>
               cn(
-                'flex min-w-[58px] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-all duration-200',
+                'flex min-w-[58px] flex-col items-center justify-center gap-1 px-1 py-2 transition-colors duration-200',
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
@@ -38,13 +31,13 @@ export function BottomNav() {
               <>
                 <span
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full transition-colors',
-                    isActive ? 'bg-primary text-primary-foreground shadow-glow' : 'bg-transparent'
+                    'flex h-6 w-8 items-center justify-center transition-colors',
+                    isActive ? 'text-primary' : 'text-muted-foreground'
                   )}
                 >
-                  <item.icon className="h-[18px] w-[18px]" />
+                  <item.icon className="h-5 w-5" />
                 </span>
-                <span className="text-[11px] font-medium leading-none">{item.label}</span>
+                <span className="text-[10px] font-medium leading-none">{item.label}</span>
               </>
             )}
           </NavLink>

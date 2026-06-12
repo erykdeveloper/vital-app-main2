@@ -22,8 +22,8 @@ import { cn } from "@/lib/utils";
 
 const patientNavItems = [
   { to: "/", icon: Heart, label: "Início" },
-  { to: "/body-progress", icon: TrendingUp, label: "Evolução" },
   { to: "/workouts", icon: Dumbbell, label: "Treinos" },
+  { to: "/body-progress", icon: TrendingUp, label: "Evolução" },
   { to: "/appointments", icon: HeartPulse, label: "Saúde" },
   { to: "/workouts/dashboard", icon: BarChart3, label: "Estatísticas" },
   { to: "/wearables", icon: Watch, label: "Relógio" },
@@ -51,7 +51,6 @@ export function AppLayout() {
     ...(profile?.is_personal_trainer ? [{ to: "/trainer", icon: BadgeCheck, label: "Personal" }] : []),
     ...(isAdmin ? [{ to: "/admin", icon: Crown, label: "Admin" }] : []),
   ];
-  const showMobileSignOut = location.pathname === "/";
 
   const handleSignOut = async () => {
     await signOut();
@@ -127,16 +126,6 @@ export function AppLayout() {
       <main className="app-content hide-scrollbar rounded-[2rem] pb-20 md:pb-0">
         <Outlet />
       </main>
-      {showMobileSignOut && (
-        <button
-          type="button"
-          onClick={() => void handleSignOut()}
-          className="fixed right-4 top-4 z-50 inline-flex h-10 items-center justify-center gap-2 rounded-full border border-red-400/30 bg-[#2d123b]/95 px-4 text-sm font-medium text-red-300 shadow-lg backdrop-blur transition-colors hover:bg-[#3a174d] hover:text-red-200 md:hidden"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Sair</span>
-        </button>
-      )}
       <BottomNav />
     </div>
   );
