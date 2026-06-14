@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
+  ArrowDown,
   ArrowUp,
   Battery,
   Calendar,
@@ -396,11 +397,11 @@ export default function Home() {
   const weeklyGoalDays = 5;
   const weeklyGoalProgress = clampPercentage((dashboardData.weeklyWorkoutDays / weeklyGoalDays) * 100);
   const weeklyDelta = dashboardData.weeklyWorkouts - dashboardData.previousWeekWorkouts;
-  const weeklyPillLabel = weeklyDelta > 0
-    ? `+${weeklyDelta} ${weeklyDelta === 1 ? "treino" : "treinos"} esta semana`
-    : dashboardData.weeklyWorkouts > 0
-      ? `${dashboardData.weeklyWorkouts} ${dashboardData.weeklyWorkouts === 1 ? "treino" : "treinos"} esta semana`
-      : "Comece sua semana";
+  const weeklyDeltaAbs = Math.abs(weeklyDelta);
+  const WeeklyDeltaIcon = weeklyDelta < 0 ? ArrowDown : ArrowUp;
+  const weeklyPillLabel = `${weeklyDelta >= 0 ? "+" : "-"}${weeklyDeltaAbs} ${
+    weeklyDeltaAbs === 1 ? "treino" : "treinos"
+  } essa semana`;
   const hasWorkoutToday = dashboardData.todayWorkouts > 0;
   const isNewUser = dashboardData.weeklyWorkouts === 0 && !latestAchievement;
   const dailyWorkout = hasWorkoutToday
@@ -472,7 +473,7 @@ export default function Home() {
               </div>
               <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-primary-foreground/20 bg-primary-foreground/10 py-1 pl-1 pr-3 text-[11px] font-extrabold">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground text-primary">
-                  <ArrowUp className="h-3 w-3" />
+                  <WeeklyDeltaIcon className="h-3 w-3" />
                 </span>
                 {weeklyPillLabel}
               </div>
