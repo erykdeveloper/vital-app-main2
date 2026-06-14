@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Activity,
   ArrowUp,
+  Battery,
   Calendar,
   CalendarClock,
   CalendarDays,
@@ -16,16 +17,20 @@ import {
   Lock,
   Trophy,
   Users,
+  Wifi,
   Zap,
   type LucideIcon,
 } from "lucide-react";
 import {
   differenceInCalendarDays,
   eachDayOfInterval,
+  endOfMonth,
   endOfWeek,
   format,
   isSameDay,
   parseISO,
+  startOfMonth,
+  startOfYear,
   startOfWeek,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -42,6 +47,14 @@ import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type
 import { cn } from "@/lib/utils";
 
 type WorkoutEntry = StrengthWorkoutApi | CardioWorkoutApi;
+type PeriodKey = "week" | "month" | "year" | "custom";
+
+interface PeriodSummary {
+  calories: number;
+  workouts: number;
+  minutes: number;
+  workoutDays: number;
+}
 
 interface DashboardData {
   weeklyMinutes: number[];
@@ -52,7 +65,15 @@ interface DashboardData {
   weeklyWorkouts: number;
   weeklyWorkoutDays: number;
   previousWeekWorkouts: number;
+  periodSummaries: Record<PeriodKey, PeriodSummary>;
 }
+
+const emptyPeriodSummary: PeriodSummary = {
+  calories: 0,
+  workouts: 0,
+  minutes: 0,
+  workoutDays: 0,
+};
 
 const initialDashboardData: DashboardData = {
   weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
@@ -63,9 +84,21 @@ const initialDashboardData: DashboardData = {
   weeklyWorkouts: 0,
   weeklyWorkoutDays: 0,
   previousWeekWorkouts: 0,
+  periodSummaries: {
+    week: emptyPeriodSummary,
+    month: emptyPeriodSummary,
+    year: emptyPeriodSummary,
+    custom: emptyPeriodSummary,
+  },
 };
 
 const weekDayLabels = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
+const periodOptions: Array<{ key: PeriodKey; label: string; icon: LucideIcon; requiresPremium?: boolean }> = [
+  { key: "week", label: "Esta semana", icon: CalendarDays },
+  { key: "month", label: "Este mês", icon: CalendarRange, requiresPremium: true },
+  { key: "year", label: "Este ano", icon: Calendar, requiresPremium: true },
+  { key: "custom", label: "Período personalizado", icon: CalendarClock, requiresPremium: true },
+];
 
 function getWorkoutDate(workout: WorkoutEntry) {
   return parseISO(workout.date);
@@ -86,6 +119,15 @@ function sumMinutes(workouts: WorkoutEntry[]) {
 
 function countUniqueWorkoutDays(workouts: WorkoutEntry[]) {
   return new Set(workouts.map((workout) => workout.date.slice(0, 10))).size;
+}
+
+function summarizeWorkouts(workouts: WorkoutEntry[]): PeriodSummary {
+  return {
+    calories: sumCalories(workouts),
+    workouts: workouts.length,
+    minutes: sumMinutes(workouts),
+    workoutDays: countUniqueWorkoutDays(workouts),
+  };
 }
 
 function clampPercentage(value: number): number {
@@ -135,6 +177,18 @@ function formatUnlockedAt(value?: string) {
   return `Desbloqueada há ${days} dias`;
 }
 
+function StatusBar() {
+  return (
+    <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+      <span>{format(new Date(), "HH:mm")}</span>
+      <span className="flex items-center gap-1.5">
+        <Wifi className="h-3 w-3" />
+        <Battery className="h-3.5 w-3.5" />
+      </span>
+    </div>
+  );
+}
+
 function StatCard({
   icon: Icon,
   value,
@@ -165,26 +219,26 @@ function PeriodOption({
   icon: Icon,
   label,
   active,
-  premium,
+  locked,
   onSelect,
 }: {
   icon: LucideIcon;
   label: string;
   active?: boolean;
-  premium?: boolean;
+  locked?: boolean;
   onSelect?: () => void;
 }) {
   return (
     <button
       type="button"
-      disabled={premium}
+      disabled={locked}
       onClick={onSelect}
       className={cn(
         "flex h-12 w-full items-center justify-between rounded-xl border px-4 text-left transition-colors",
         active
           ? "border-primary bg-primary/10"
           : "border-white/10 bg-secondary/80 hover:border-primary/40",
-        premium ? "cursor-default hover:border-white/10" : ""
+        locked ? "cursor-default hover:border-white/10" : ""
       )}
     >
       <span className="flex min-w-0 items-center gap-3">
@@ -194,7 +248,7 @@ function PeriodOption({
 
       {active ? (
         <Check className="h-4 w-4 text-primary" />
-      ) : premium ? (
+      ) : locked ? (
         <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold text-primary">
           <Lock className="h-3 w-3" />
           Premium
@@ -205,10 +259,12 @@ function PeriodOption({
 }
 
 export default function Home() {
-  const { profile, loading } = useProfile();
+  const { profile, loading, error: profileError } = useProfile();
   const { latestAchievement } = useAchievements();
   const [dashboardData, setDashboardData] = useState<DashboardData>(initialDashboardData);
+  const [dashboardError, setDashboardError] = useState(false);
   const [periodOpen, setPeriodOpen] = useState(false);
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodKey>("week");
   const today = useMemo(() => new Date(), []);
 
   useEffect(() => {
@@ -231,6 +287,9 @@ export default function Home() {
         dayEnd.setHours(23, 59, 59, 999);
         const weekStart = startOfWeek(now, { weekStartsOn: 1 });
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+        const yearStart = startOfYear(now);
         const previousWeekStart = new Date(weekStart);
         previousWeekStart.setDate(previousWeekStart.getDate() - 7);
         const previousWeekEnd = new Date(weekEnd);
@@ -248,6 +307,14 @@ export default function Home() {
         const previousWeekWorkouts = combined.filter((workout) => {
           const workoutDate = getWorkoutDate(workout);
           return !Number.isNaN(workoutDate.getTime()) && workoutDate >= previousWeekStart && workoutDate <= previousWeekEnd;
+        });
+        const monthWorkouts = combined.filter((workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          return !Number.isNaN(workoutDate.getTime()) && workoutDate >= monthStart && workoutDate <= monthEnd;
+        });
+        const yearWorkouts = combined.filter((workout) => {
+          const workoutDate = getWorkoutDate(workout);
+          return !Number.isNaN(workoutDate.getTime()) && workoutDate >= yearStart && workoutDate <= now;
         });
 
         const weeklyMinutes = weekDays.map((day) =>
@@ -268,10 +335,18 @@ export default function Home() {
           weeklyWorkouts: weekWorkouts.length,
           weeklyWorkoutDays: countUniqueWorkoutDays(weekWorkouts),
           previousWeekWorkouts: previousWeekWorkouts.length,
+          periodSummaries: {
+            week: summarizeWorkouts(weekWorkouts),
+            month: summarizeWorkouts(monthWorkouts),
+            year: summarizeWorkouts(yearWorkouts),
+            custom: summarizeWorkouts(monthWorkouts),
+          },
         });
+        setDashboardError(false);
       } catch {
         if (active) {
           setDashboardData(initialDashboardData);
+          setDashboardError(true);
         }
       }
     };
@@ -285,8 +360,24 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-full items-center justify-center">
+      <div className="flex min-h-full items-center justify-center bg-[hsl(var(--background))]">
         <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <div className="min-h-full bg-[hsl(var(--background))]">
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-3">
+          <StatusBar />
+          <div className="mt-24 rounded-[1.25rem] border border-white/10 bg-card p-5 text-center shadow-elegant">
+            <p className="text-lg font-black text-foreground">Não foi possível carregar a tela inicial</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Verifique sua conexão e tente abrir o app novamente.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -294,7 +385,9 @@ export default function Home() {
   const firstName = profile?.full_name?.split(" ")[0] || "Paciente";
   const fullName = profile?.full_name || "Paciente";
   const initials = getInitials(fullName);
-  const totalWeeklyMinutes = dashboardData.weeklyMinutes.reduce((sum, minutes) => sum + minutes, 0);
+  const hasPremiumAccess = Boolean(profile?.is_premium || profile?.is_admin || profile?.is_personal_trainer);
+  const selectedPeriodOption = periodOptions.find((option) => option.key === selectedPeriod) ?? periodOptions[0];
+  const selectedPeriodSummary = dashboardData.periodSummaries[selectedPeriod] ?? dashboardData.periodSummaries.week;
   const currentWeekDay = Math.max(0, Math.min(6, today.getDay() === 0 ? 6 : today.getDay() - 1));
   const weeklyChartValues = dashboardData.weeklyMinutes.map((minutes, index) =>
     minutes > 0 ? minutes : dashboardData.weeklyWorkoutCounts[index] > 0 ? 25 : 0
@@ -309,12 +402,42 @@ export default function Home() {
       ? `${dashboardData.weeklyWorkouts} ${dashboardData.weeklyWorkouts === 1 ? "treino" : "treinos"} esta semana`
       : "Comece sua semana";
   const hasWorkoutToday = dashboardData.todayWorkouts > 0;
-  const latestAchievementTitle = latestAchievement?.achievement.name || "Semana perfeita";
-  const latestAchievementDescription = latestAchievement?.achievement.description || "7 dias seguidos de treino registrado";
+  const isNewUser = dashboardData.weeklyWorkouts === 0 && !latestAchievement;
+  const dailyWorkout = hasWorkoutToday
+    ? {
+        to: "/workouts/history",
+        badge: "Progresso de hoje",
+        title: "Treino registrado hoje",
+        duration: formatMinutesCompact(dashboardData.todayMinutes),
+        trainer: "Seu histórico",
+        action: "Ver",
+      }
+    : isNewUser
+      ? {
+          to: "/workouts/musculacao/academia",
+          badge: "Comece por aqui",
+          title: "Peito & Tríceps - Hipertrofia",
+          duration: "50 min",
+          trainer: "Plano Vitalissy",
+          action: "Iniciar",
+        }
+      : {
+          to: hasPremiumAccess ? "/workouts/cardio/hiit" : "/workouts/musculacao/academia",
+          badge: hasPremiumAccess ? "Premium sugerido" : "Sugerido para hoje",
+          title: hasPremiumAccess ? "Full Body Queima Total" : "Peito & Tríceps - Hipertrofia",
+          duration: hasPremiumAccess ? "45 min" : "50 min",
+          trainer: hasPremiumAccess ? "Rafael Zulu" : "Plano Vitalissy",
+          action: "Iniciar",
+        };
+  const latestAchievementTitle = latestAchievement?.achievement.name || "Primeira conquista te espera";
+  const latestAchievementDescription = latestAchievement?.achievement.description || "Registre um treino para começar sua sequência.";
+  const latestAchievementEyebrow = latestAchievement ? formatUnlockedAt(latestAchievement.unlocked_at) : "Comece hoje";
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6">
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-3">
+        <StatusBar />
+
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Vitalissy</p>
@@ -335,6 +458,7 @@ export default function Home() {
         </header>
 
         <section className="relative overflow-hidden rounded-[1.35rem] bg-gradient-primary px-5 py-5 text-primary-foreground shadow-glow">
+          <span className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary-foreground/10" aria-hidden="true" />
           <div className="relative">
             <div>
               <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-primary-foreground/75">
@@ -404,21 +528,27 @@ export default function Home() {
             className="inline-flex h-8 items-center gap-2 rounded-full border border-white/10 bg-secondary px-4 text-xs font-bold text-primary"
           >
             <CalendarDays className="h-3.5 w-3.5" />
-            Esta semana
+            {selectedPeriodOption.label}
             <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
 
+        {dashboardError ? (
+          <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-xs font-semibold leading-relaxed text-primary">
+            Não foi possível atualizar os dados de treino agora. Mantivemos a tela em modo seguro.
+          </div>
+        ) : null}
+
         <section className="grid grid-cols-3 gap-3">
-          <StatCard icon={Flame} value={formatNumber(dashboardData.weeklyCalories)} label="Kcal queimadas" />
-          <StatCard icon={Clock3} value={formatMinutesCompact(totalWeeklyMinutes)} label="Tempo de treino" />
-          <StatCard icon={Activity} value={formatNumber(dashboardData.weeklyWorkouts)} label="Atividades" />
+          <StatCard icon={Flame} value={formatNumber(selectedPeriodSummary.calories)} label="Kcal queimadas" />
+          <StatCard icon={Clock3} value={formatMinutesCompact(selectedPeriodSummary.minutes)} label="Tempo de treino" />
+          <StatCard icon={Activity} value={formatNumber(selectedPeriodSummary.workouts)} label="Atividades" />
         </section>
 
         <section className="space-y-3">
           <SectionLabel>Treino do dia</SectionLabel>
           <Link
-            to={hasWorkoutToday ? "/workouts/history" : "/workouts"}
+            to={dailyWorkout.to}
             className="block overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
           >
             <div className="relative flex h-20 items-center justify-center overflow-hidden bg-[hsl(var(--background-strong))]">
@@ -430,27 +560,27 @@ export default function Home() {
               <Dumbbell className="relative h-9 w-9 text-primary/25" />
               <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-primary">
                 <Zap className="h-3 w-3 fill-primary" />
-                Sugerido para hoje
+                {dailyWorkout.badge}
               </span>
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <h3 className="truncate text-sm font-extrabold text-foreground">
-                  {hasWorkoutToday ? "Treino registrado hoje" : "Peito & Tríceps - Hipertrofia"}
+                  {dailyWorkout.title}
                 </h3>
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3 w-3 text-primary" />
-                    {hasWorkoutToday ? formatMinutesCompact(dashboardData.todayMinutes) : "50 min"}
+                    {dailyWorkout.duration}
                   </span>
                   <span className="inline-flex min-w-0 items-center gap-1">
                     <Users className="h-3 w-3 shrink-0 text-primary" />
-                    <span className="truncate">Plano Vitalissy</span>
+                    <span className="truncate">{dailyWorkout.trainer}</span>
                   </span>
                 </div>
               </div>
               <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-xs font-extrabold text-primary-foreground">
-                {hasWorkoutToday ? "Ver" : "Iniciar"}
+                {dailyWorkout.action}
               </span>
             </div>
           </Link>
@@ -459,7 +589,7 @@ export default function Home() {
         <section className="space-y-3">
           <SectionLabel>Sua última conquista</SectionLabel>
           <Link
-            to="/premium"
+            to={latestAchievement ? "/premium" : "/workouts"}
             className="flex items-center gap-4 rounded-[1.15rem] border border-primary bg-card px-4 py-4 shadow-elegant transition-transform hover:-translate-y-0.5"
           >
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-primary text-primary-foreground">
@@ -467,7 +597,7 @@ export default function Home() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-primary">
-                {formatUnlockedAt(latestAchievement?.unlocked_at)}
+                {latestAchievementEyebrow}
               </span>
               <span className="mt-1 block truncate text-sm font-extrabold text-foreground">
                 {latestAchievementTitle}
@@ -488,27 +618,38 @@ export default function Home() {
           </DrawerHeader>
 
           <div className="grid gap-2">
-            <PeriodOption
-              icon={CalendarDays}
-              label="Esta semana"
-              active
-              onSelect={() => setPeriodOpen(false)}
-            />
-            <PeriodOption icon={CalendarRange} label="Este mês" premium />
-            <PeriodOption icon={Calendar} label="Este ano" premium />
-            <PeriodOption icon={CalendarClock} label="Período personalizado" premium />
+            {periodOptions.map((option) => {
+              const locked = Boolean(option.requiresPremium && !hasPremiumAccess);
+
+              return (
+                <PeriodOption
+                  key={option.key}
+                  icon={option.icon}
+                  label={option.label}
+                  active={selectedPeriod === option.key}
+                  locked={locked}
+                  onSelect={() => {
+                    if (locked) return;
+                    setSelectedPeriod(option.key);
+                    setPeriodOpen(false);
+                  }}
+                />
+              );
+            })}
           </div>
 
-          <Link
-            to="/premium"
-            onClick={() => setPeriodOpen(false)}
-            className="mt-4 block rounded-[1rem] bg-gradient-primary px-4 py-4 text-center text-primary-foreground shadow-glow"
-          >
-            <span className="block text-sm font-black">Desbloquear Premium</span>
-            <span className="mt-1 block text-xs text-primary-foreground/75">
-              Veja sua evolução completa por qualquer período
-            </span>
-          </Link>
+          {!hasPremiumAccess ? (
+            <Link
+              to="/premium"
+              onClick={() => setPeriodOpen(false)}
+              className="mt-4 block rounded-[1rem] bg-gradient-primary px-4 py-4 text-center text-primary-foreground shadow-glow"
+            >
+              <span className="block text-sm font-black">Desbloquear Premium</span>
+              <span className="mt-1 block text-xs text-primary-foreground/75">
+                Veja sua evolução completa por qualquer período
+              </span>
+            </Link>
+          ) : null}
         </DrawerContent>
       </Drawer>
     </div>
