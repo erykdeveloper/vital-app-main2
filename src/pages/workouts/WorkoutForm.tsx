@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   Check,
@@ -23,6 +23,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { useWorkoutDraft } from "@/hooks/useWorkoutDraft";
 import { UnsavedChangesDialog } from "@/components/UnsavedChangesDialog";
+import { normalizeWorkoutStartState, type WorkoutStartExercise } from "@/lib/workoutStart";
 import { toast } from "sonner";
 
 interface ExerciseSet {
@@ -180,6 +181,21 @@ function createExerciseFromCatalog(item: ExerciseCatalogItem): Exercise {
   };
 }
 
+function createExerciseFromWorkoutStart(exercise: WorkoutStartExercise): Exercise {
+  return {
+    name: exercise.name,
+    group: exercise.group,
+    category: exercise.category,
+    location: exercise.location,
+    previous: exercise.previous || exercise.sets.map(() => "—"),
+    sets: exercise.sets.map((set) => ({
+      weight: Number(set.weight) || 0,
+      reps: Math.round(Number(set.reps)) || 0,
+      completed: Boolean(set.completed),
+    })),
+  };
+}
+
 function getExerciseMeta(exercise: Exercise) {
   return exerciseCatalog.find((item) => item.name === exercise.name);
 }
@@ -250,9 +266,11 @@ function MetaIcon({ icon: Icon, children }: { icon: LucideIcon; children: React.
 
 export default function WorkoutForm() {
   const { type = "academia" } = useParams<{ type: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
   const config = workoutTypeConfig[type] || workoutTypeConfig.academia;
+  const workoutStartState = useMemo(() => normalizeWorkoutStartState(location.state), [location.state]);
 
   const { saveDraft, loadDraft, clearDraft } = useWorkoutDraft<WorkoutDraftData>(type);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -283,6 +301,20 @@ export default function WorkoutForm() {
   }, []);
 
   useEffect(() => {
+    if (workoutStartState) {
+      setObjective(workoutStartState.objective || config.defaultFocus);
+      setAddedExercises(workoutStartState.exercises.map(createExerciseFromWorkoutStart));
+      setCalories(workoutStartState.calories || "");
+      clearDraft();
+      setDraftLoaded(true);
+      toast.success(
+        workoutStartState.source === "trainer"
+          ? "Treino do personal carregado"
+          : "Sugestão de treino carregada",
+      );
+      return;
+    }
+
     const draft = loadDraft();
     if (draft) {
       setObjective(draft.objective || config.defaultFocus);
@@ -293,7 +325,7 @@ export default function WorkoutForm() {
       toast.info("Rascunho recuperado automaticamente");
     }
     setDraftLoaded(true);
-  }, [config.defaultFocus, loadDraft]);
+  }, [clearDraft, config.defaultFocus, loadDraft, workoutStartState]);
 
   const hasUnsavedChanges = Boolean(objective.trim() || addedExercises.length > 0 || calories);
 

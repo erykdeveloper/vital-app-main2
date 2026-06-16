@@ -61,6 +61,32 @@ export interface TrainerClientSummary {
   logs: TrainerClientLog[];
 }
 
+export interface MyTrainerAssignment {
+  id: string;
+  status: 'active' | 'archived';
+  notes: string | null;
+  goals: string | null;
+  training_plan: string | null;
+  created_at: string;
+  updated_at: string;
+  trainer: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+  } | null;
+}
+
+export function useMyTrainerAssignment(enabled = true) {
+  return useQuery({
+    queryKey: ['myTrainerAssignment'],
+    queryFn: async () => {
+      const response = await api.get<{ assignment: MyTrainerAssignment | null }>('/trainer/my-assignment');
+      return response.assignment;
+    },
+    enabled,
+  });
+}
+
 export function useTrainerClients() {
   return useQuery({
     queryKey: ['trainerClients'],

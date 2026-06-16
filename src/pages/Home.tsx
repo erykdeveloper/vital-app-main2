@@ -4,7 +4,6 @@ import {
   Activity,
   ArrowDown,
   ArrowUp,
-  Battery,
   Calendar,
   CalendarClock,
   CalendarDays,
@@ -18,7 +17,6 @@ import {
   Lock,
   Trophy,
   Users,
-  Wifi,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -44,7 +42,9 @@ import {
 } from "@/components/ui/drawer";
 import { useAchievements } from "@/hooks/useAchievements";
 import { useProfile } from "@/hooks/useProfile";
+import { useMyTrainerAssignment } from "@/hooks/useTrainer";
 import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type StrengthWorkoutApi } from "@/lib/workoutApi";
+import { buildWorkoutStartFromTrainerPlan, type WorkoutStartState } from "@/lib/workoutStart";
 import { cn } from "@/lib/utils";
 
 type WorkoutEntry = StrengthWorkoutApi | CardioWorkoutApi;
@@ -100,6 +100,60 @@ const periodOptions: Array<{ key: PeriodKey; label: string; icon: LucideIcon; re
   { key: "year", label: "Este ano", icon: Calendar, requiresPremium: true },
   { key: "custom", label: "Período personalizado", icon: CalendarClock, requiresPremium: true },
 ];
+
+interface HomeDailyWorkout {
+  to: string;
+  state?: WorkoutStartState;
+  badge: string;
+  title: string;
+  duration: string;
+  trainer: string;
+  action: string;
+  description?: string;
+  locked?: boolean;
+}
+
+const premiumSuggestedWorkoutStart: WorkoutStartState = {
+  source: "suggested",
+  objective: "Full Body Queima Total",
+  trainerName: "Plano Premium Vitalissy",
+  calories: 480,
+  exercises: [
+    {
+      name: "Agachamento livre",
+      group: "Pernas e glúteos",
+      category: "Peso corpo",
+      location: "Academia",
+      sets: [
+        { weight: 0, reps: 12, completed: false },
+        { weight: 0, reps: 12, completed: false },
+        { weight: 0, reps: 10, completed: false },
+      ],
+    },
+    {
+      name: "Remada baixa",
+      group: "Costas e bíceps",
+      category: "Máquina",
+      location: "Academia",
+      sets: [
+        { weight: 25, reps: 12, completed: false },
+        { weight: 30, reps: 10, completed: false },
+        { weight: 30, reps: 10, completed: false },
+      ],
+    },
+    {
+      name: "Bike HIIT",
+      group: "Cardio",
+      category: "Máquina",
+      location: "Academia",
+      sets: [
+        { weight: 0, reps: 10, completed: false },
+        { weight: 0, reps: 10, completed: false },
+        { weight: 0, reps: 10, completed: false },
+      ],
+    },
+  ],
+};
 
 function getWorkoutDate(workout: WorkoutEntry) {
   return parseISO(workout.date);
@@ -178,18 +232,6 @@ function formatUnlockedAt(value?: string) {
   return `Desbloqueada há ${days} dias`;
 }
 
-function StatusBar() {
-  return (
-    <div className="flex items-center justify-between text-[11px] font-medium text-muted-foreground">
-      <span>{format(new Date(), "HH:mm")}</span>
-      <span className="flex items-center gap-1.5">
-        <Wifi className="h-3 w-3" />
-        <Battery className="h-3.5 w-3.5" />
-      </span>
-    </div>
-  );
-}
-
 function StatCard({
   icon: Icon,
   value,
@@ -262,6 +304,7 @@ function PeriodOption({
 export default function Home() {
   const { profile, loading, error: profileError } = useProfile();
   const { latestAchievement } = useAchievements();
+  const { data: trainerAssignment, isLoading: trainerAssignmentLoading } = useMyTrainerAssignment(Boolean(profile));
   const [dashboardData, setDashboardData] = useState<DashboardData>(initialDashboardData);
   const [dashboardError, setDashboardError] = useState(false);
   const [periodOpen, setPeriodOpen] = useState(false);
@@ -359,6 +402,13 @@ export default function Home() {
     };
   }, []);
 
+  const trainerName = trainerAssignment?.trainer?.full_name || "Seu personal";
+  const trainerPlan = trainerAssignment?.training_plan?.trim() ?? "";
+  const trainerWorkoutStart = useMemo(
+    () => (trainerPlan ? buildWorkoutStartFromTrainerPlan(trainerPlan, trainerName) : null),
+    [trainerName, trainerPlan],
+  );
+
   if (loading) {
     return (
       <div className="flex min-h-full items-center justify-center bg-[hsl(var(--background))]">
@@ -370,8 +420,7 @@ export default function Home() {
   if (profileError) {
     return (
       <div className="min-h-full bg-[hsl(var(--background))]">
-        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-3">
-          <StatusBar />
+        <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col px-5 pb-28 pt-6">
           <div className="mt-24 rounded-[1.25rem] border border-white/10 bg-card p-5 text-center shadow-elegant">
             <p className="text-lg font-black text-foreground">Não foi possível carregar a tela inicial</p>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -402,43 +451,64 @@ export default function Home() {
   const weeklyPillLabel = `${weeklyDelta >= 0 ? "+" : "-"}${weeklyDeltaAbs} ${
     weeklyDeltaAbs === 1 ? "treino" : "treinos"
   } essa semana`;
-  const hasWorkoutToday = dashboardData.todayWorkouts > 0;
-  const isNewUser = dashboardData.weeklyWorkouts === 0 && !latestAchievement;
-  const dailyWorkout = hasWorkoutToday
+  const dailyWorkout: HomeDailyWorkout = trainerAssignmentLoading
     ? {
-        to: "/workouts/history",
-        badge: "Progresso de hoje",
-        title: "Treino registrado hoje",
-        duration: formatMinutesCompact(dashboardData.todayMinutes),
-        trainer: "Seu histórico",
-        action: "Ver",
+        to: "/workouts",
+        badge: "Treino do dia",
+        title: "Carregando prescrição",
+        duration: "--",
+        trainer: "Vitalissy",
+        action: "Abrir",
       }
-    : isNewUser
+    : trainerWorkoutStart
       ? {
           to: "/workouts/musculacao/academia",
-          badge: "Comece por aqui",
-          title: "Peito & Tríceps - Hipertrofia",
-          duration: "50 min",
-          trainer: "Plano Vitalissy",
+          state: trainerWorkoutStart,
+          badge: "Do seu personal",
+          title: trainerWorkoutStart.objective,
+          duration: `${trainerWorkoutStart.exercises.length} exercícios`,
+          trainer: trainerName,
           action: "Iniciar",
+          description: "Prescrição liberada para hoje.",
         }
-      : {
-          to: hasPremiumAccess ? "/workouts/cardio/hiit" : "/workouts/musculacao/academia",
-          badge: hasPremiumAccess ? "Premium sugerido" : "Sugerido para hoje",
-          title: hasPremiumAccess ? "Full Body Queima Total" : "Peito & Tríceps - Hipertrofia",
-          duration: hasPremiumAccess ? "45 min" : "50 min",
-          trainer: hasPremiumAccess ? "Rafael Zulu" : "Plano Vitalissy",
-          action: "Iniciar",
-        };
+      : trainerAssignment
+        ? {
+            to: "/workouts",
+            badge: "Do seu personal",
+            title: "Aguardando treino de hoje",
+            duration: "--",
+            trainer: trainerName,
+            action: "Ver treinos",
+            description: "Seu personal ainda não enviou uma prescrição.",
+          }
+        : hasPremiumAccess
+          ? {
+              to: "/workouts/musculacao/academia",
+              state: premiumSuggestedWorkoutStart,
+              badge: "Premium sugerido",
+              title: "Full Body Queima Total",
+              duration: "45 min",
+              trainer: "Plano Premium Vitalissy",
+              action: "Iniciar",
+              description: "Sugestão de treino do dia.",
+            }
+          : {
+              to: "/premium",
+              badge: "Premium sugerido",
+              title: "Full Body Queima Total",
+              duration: "45 min",
+              trainer: "Plano Premium Vitalissy",
+              action: "Iniciar",
+              description: "Assine para desbloquear a sugestão de hoje.",
+              locked: true,
+            };
   const latestAchievementTitle = latestAchievement?.achievement.name || "Primeira conquista te espera";
   const latestAchievementDescription = latestAchievement?.achievement.description || "Registre um treino para começar sua sequência.";
   const latestAchievementEyebrow = latestAchievement ? formatUnlockedAt(latestAchievement.unlocked_at) : "Comece hoje";
 
   return (
     <div className="min-h-full bg-[hsl(var(--background))]">
-      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-3">
-        <StatusBar />
-
+      <div className="mx-auto flex min-h-full w-full max-w-[430px] flex-col gap-4 px-5 pb-28 pt-6">
         <header className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Vitalissy</p>
@@ -550,26 +620,42 @@ export default function Home() {
           <SectionLabel>Treino do dia</SectionLabel>
           <Link
             to={dailyWorkout.to}
-            className="block overflow-hidden rounded-[1.15rem] border border-white/10 bg-card shadow-elegant transition-transform hover:-translate-y-0.5"
+            state={dailyWorkout.state}
+            className={cn(
+              "relative block overflow-hidden rounded-[1.15rem] border bg-card shadow-elegant transition-transform hover:-translate-y-0.5",
+              dailyWorkout.locked ? "border-primary/30" : "border-white/10"
+            )}
           >
             <div className="relative flex h-20 items-center justify-center overflow-hidden bg-[hsl(var(--background-strong))]">
               <div
-                className="absolute inset-0 bg-cover bg-center opacity-20"
+                className={cn(
+                  "absolute inset-0 bg-cover bg-center opacity-20",
+                  dailyWorkout.locked ? "scale-105 blur-[2px]" : ""
+                )}
                 style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
               />
               <div className="absolute inset-0 bg-[repeating-linear-gradient(-45deg,transparent,transparent_10px,hsl(var(--primary)/0.04)_10px,hsl(var(--primary)/0.04)_20px)]" />
-              <Dumbbell className="relative h-9 w-9 text-primary/25" />
+              <Dumbbell className={cn("relative h-9 w-9 text-primary/25", dailyWorkout.locked ? "blur-[1px]" : "")} />
               <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-primary/15 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-primary">
                 <Zap className="h-3 w-3 fill-primary" />
                 {dailyWorkout.badge}
               </span>
+              {dailyWorkout.locked ? (
+                <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-background/90 px-3 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-primary shadow-elegant">
+                  <Lock className="h-3 w-3" />
+                  Premium
+                </span>
+              ) : null}
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <h3 className="truncate text-sm font-extrabold text-foreground">
+                <h3 className={cn("truncate text-sm font-extrabold text-foreground", dailyWorkout.locked ? "blur-[2px]" : "")}>
                   {dailyWorkout.title}
                 </h3>
-                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <div className={cn(
+                  "mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground",
+                  dailyWorkout.locked ? "blur-[2px]" : ""
+                )}>
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3 w-3 text-primary" />
                     {dailyWorkout.duration}
@@ -579,6 +665,14 @@ export default function Home() {
                     <span className="truncate">{dailyWorkout.trainer}</span>
                   </span>
                 </div>
+                {dailyWorkout.description ? (
+                  <p className={cn(
+                    "mt-2 truncate text-[11px] font-semibold",
+                    dailyWorkout.locked ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {dailyWorkout.description}
+                  </p>
+                ) : null}
               </div>
               <span className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-primary px-4 text-xs font-extrabold text-primary-foreground">
                 {dailyWorkout.action}

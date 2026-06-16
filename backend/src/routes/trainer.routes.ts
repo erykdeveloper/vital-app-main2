@@ -30,7 +30,52 @@ const createLogSchema = z.object({
   content: z.string().trim().min(2).max(5000),
 });
 
-router.use(requireAuth, requireRole(UserRole.PERSONAL_TRAINER, "Acesso restrito a personal trainers"));
+router.use(requireAuth);
+
+router.get(
+  "/my-assignment",
+  asyncHandler(async (req: AuthenticatedRequest, res) => {
+    const assignment = await prisma.trainerClient.findFirst({
+      where: {
+        clientId: req.auth!.userId,
+        status: TrainerClientStatus.ACTIVE,
+      },
+      include: {
+        trainer: {
+          include: {
+            profile: true,
+          },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!assignment) {
+      return res.json({ assignment: null });
+    }
+
+    return res.json({
+      assignment: {
+        id: assignment.id,
+        status: assignment.status.toLowerCase(),
+        notes: assignment.notes,
+        goals: assignment.goals,
+        training_plan: assignment.trainingPlan,
+        created_at: assignment.createdAt,
+        updated_at: assignment.updatedAt,
+        trainer: assignment.trainer.profile
+          ? {
+              id: assignment.trainerId,
+              full_name: assignment.trainer.profile.fullName,
+              avatar_url: assignment.trainer.profile.avatarUrl,
+            }
+          : null,
+      },
+    });
+  }),
+);
+
+router.use(requireRole(UserRole.PERSONAL_TRAINER, "Acesso restrito a personal trainers"));
 
 router.get(
   "/search-users",
