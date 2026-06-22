@@ -742,6 +742,7 @@ function FreeWorkoutDrawer({
 }
 
 export default function Workouts() {
+  const navigate = useNavigate();
   const { profile } = useProfile();
   const hasPremiumAccess = Boolean(profile?.is_premium || profile?.is_admin || profile?.is_personal_trainer);
   const [activeTab, setActiveTab] = useState<ActiveTab>('library');
@@ -942,15 +943,17 @@ export default function Workouts() {
               <SectionTitle title="Explorar categorias" />
               <div className="grid grid-cols-2 gap-3">
                 {muscleGroups.map((group) => (
-                  <Link
+                  <button
                     key={group.id}
-                    to={group.route}
-                    className={cn('rounded-[1rem] border border-white/10 bg-gradient-to-br p-4 shadow-elegant transition-transform hover:-translate-y-0.5', group.tone)}
+                    type="button"
+                    onClick={() => navigate(group.route)}
+                    className={cn('rounded-[1rem] border border-white/10 bg-gradient-to-br p-4 text-left shadow-elegant transition-transform hover:-translate-y-0.5', group.tone)}
+                    aria-label={`Abrir treinos de ${group.label}`}
                   >
                     <IconTile icon={group.icon} className="h-8 w-8" />
                     <h3 className="mt-4 text-sm font-black leading-none text-foreground">{group.label}</h3>
                     <p className="mt-1 text-xs text-muted-foreground">{group.count}</p>
-                  </Link>
+                  </button>
                 ))}
               </div>
             </section>
