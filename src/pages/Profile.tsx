@@ -9,6 +9,7 @@ import {
   Dumbbell,
   Edit,
   HelpCircle,
+  LogOut,
   Save,
   Scale,
   Settings as SettingsIcon,
@@ -17,11 +18,12 @@ import {
   Watch,
   X,
 } from 'lucide-react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useToast } from '@/hooks/use-toast';
@@ -88,12 +90,15 @@ function AccountGroup({ actions }: { actions: AccountAction[] }) {
 }
 
 export default function Profile() {
+  const { signOut } = useAuth();
   const { profile, loading, uploading, updateProfile, uploadAvatar } = useProfile();
   const { achievements, userAchievements } = useAchievements();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [highlightBMI, setHighlightBMI] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -225,6 +230,12 @@ export default function Profile() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleLogout = async () => {
+    setSigningOut(true);
+    await signOut();
+    navigate('/login', { replace: true });
   };
 
   if (loading) {
@@ -417,6 +428,15 @@ export default function Profile() {
           <AccountGroup actions={primaryActions} />
           <AccountGroup actions={healthActions} />
           <AccountGroup actions={supportActions} />
+          <Button
+            variant="outline"
+            onClick={() => void handleLogout()}
+            disabled={signingOut}
+            className="h-14 w-full rounded-xl border-destructive/50 bg-card/85 text-destructive shadow-elegant hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <LogOut className="mr-2 h-5 w-5" />
+            {signingOut ? 'Saindo...' : 'Sair do aplicativo'}
+          </Button>
         </>
       )}
 
