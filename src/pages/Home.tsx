@@ -436,6 +436,8 @@ export default function Home() {
   const fullName = profile?.full_name || "Paciente";
   const initials = getInitials(fullName);
   const hasPremiumAccess = Boolean(profile?.is_premium || profile?.is_admin || profile?.is_personal_trainer);
+  const hasPersonalTrainer = Boolean(trainerAssignment);
+  const hasPersonalWorkoutToday = Boolean(trainerWorkoutStart);
   const selectedPeriodOption = periodOptions.find((option) => option.key === selectedPeriod) ?? periodOptions[0];
   const selectedPeriodSummary = dashboardData.periodSummaries[selectedPeriod] ?? dashboardData.periodSummaries.week;
   const currentWeekDay = Math.max(0, Math.min(6, today.getDay() === 0 ? 6 : today.getDay() - 1));
@@ -451,57 +453,61 @@ export default function Home() {
   const weeklyPillLabel = `${weeklyDelta >= 0 ? "+" : "-"}${weeklyDeltaAbs} ${
     weeklyDeltaAbs === 1 ? "treino" : "treinos"
   } essa semana`;
-  const dailyWorkout: HomeDailyWorkout = trainerAssignmentLoading
-    ? {
-        to: "/workouts",
-        badge: "Treino do dia",
-        title: "Carregando prescrição",
-        duration: "--",
-        trainer: "Vitalissy",
-        action: "Abrir",
-      }
-    : trainerWorkoutStart
-      ? {
-          to: "/workouts/musculacao/academia",
-          state: trainerWorkoutStart,
-          badge: "Do seu personal",
-          title: trainerWorkoutStart.objective,
-          duration: `${trainerWorkoutStart.exercises.length} exercícios`,
-          trainer: trainerName,
-          action: "Iniciar",
-          description: "Prescrição liberada para hoje.",
-        }
-      : trainerAssignment
-        ? {
-            to: "/workouts",
-            badge: "Do seu personal",
-            title: "Aguardando treino de hoje",
-            duration: "--",
-            trainer: trainerName,
-            action: "Ver treinos",
-            description: "Seu personal ainda não enviou uma prescrição.",
-          }
-        : hasPremiumAccess
-          ? {
-              to: "/workouts/musculacao/academia",
-              state: premiumSuggestedWorkoutStart,
-              badge: "Premium sugerido",
-              title: "Full Body Queima Total",
-              duration: "45 min",
-              trainer: "Plano Premium Vitalissy",
-              action: "Iniciar",
-              description: "Sugestão de treino do dia.",
-            }
-          : {
-              to: "/premium",
-              badge: "Premium sugerido",
-              title: "Full Body Queima Total",
-              duration: "45 min",
-              trainer: "Plano Premium Vitalissy",
-              action: "Iniciar",
-              description: "Assine para desbloquear a sugestão de hoje.",
-              locked: true,
-            };
+  let dailyWorkout: HomeDailyWorkout;
+
+  if (trainerAssignmentLoading) {
+    dailyWorkout = {
+      to: "/workouts",
+      badge: "Treino do dia",
+      title: "Carregando prescrição",
+      duration: "--",
+      trainer: "Vitalissy",
+      action: "Abrir",
+    };
+  } else if (hasPersonalWorkoutToday && trainerWorkoutStart) {
+    dailyWorkout = {
+      to: "/workouts/musculacao/academia",
+      state: trainerWorkoutStart,
+      badge: "Do seu personal",
+      title: trainerWorkoutStart.objective,
+      duration: `${trainerWorkoutStart.exercises.length} exercícios`,
+      trainer: trainerName,
+      action: "Iniciar",
+      description: "Prescrição liberada para hoje.",
+    };
+  } else if (hasPersonalTrainer) {
+    dailyWorkout = {
+      to: "/workouts",
+      badge: "Do seu personal",
+      title: "Aguardando treino de hoje",
+      duration: "--",
+      trainer: trainerName,
+      action: "Ver treinos",
+      description: "Seu personal ainda não enviou uma prescrição.",
+    };
+  } else if (hasPremiumAccess) {
+    dailyWorkout = {
+      to: "/workouts/musculacao/academia",
+      state: premiumSuggestedWorkoutStart,
+      badge: "Premium sugerido",
+      title: "Full Body Queima Total",
+      duration: "45 min",
+      trainer: "Plano Premium Vitalissy",
+      action: "Iniciar",
+      description: "Sugestão de treino do dia.",
+    };
+  } else {
+    dailyWorkout = {
+      to: "/premium",
+      badge: "Premium sugerido",
+      title: "Full Body Queima Total",
+      duration: "45 min",
+      trainer: "Plano Premium Vitalissy",
+      action: "Iniciar",
+      description: "Toque em Iniciar para assinar o Premium.",
+      locked: true,
+    };
+  }
   const latestAchievementTitle = latestAchievement?.achievement.name || "Primeira conquista te espera";
   const latestAchievementDescription = latestAchievement?.achievement.description || "Registre um treino para começar sua sequência.";
   const latestAchievementEyebrow = latestAchievement ? formatUnlockedAt(latestAchievement.unlocked_at) : "Comece hoje";
@@ -630,7 +636,7 @@ export default function Home() {
               <div
                 className={cn(
                   "absolute inset-0 bg-cover bg-center opacity-20",
-                  dailyWorkout.locked ? "scale-105 blur-[2px]" : ""
+                  dailyWorkout.locked ? "scale-105 blur-[3px]" : ""
                 )}
                 style={{ backgroundImage: "url('/images/workout-examples-ai.jpg')" }}
               />
@@ -649,12 +655,12 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
-                <h3 className={cn("truncate text-sm font-extrabold text-foreground", dailyWorkout.locked ? "blur-[2px]" : "")}>
+                <h3 className={cn("truncate text-sm font-extrabold text-foreground", dailyWorkout.locked ? "blur-[3px]" : "")}>
                   {dailyWorkout.title}
                 </h3>
                 <div className={cn(
                   "mt-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground",
-                  dailyWorkout.locked ? "blur-[2px]" : ""
+                  dailyWorkout.locked ? "blur-[3px]" : ""
                 )}>
                   <span className="inline-flex items-center gap-1">
                     <Clock3 className="h-3 w-3 text-primary" />

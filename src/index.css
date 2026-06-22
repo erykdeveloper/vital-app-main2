@@ -139,8 +139,8 @@ body.auth-scroll-page #root {
   flex: 1;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  /* Safe area padding - aplicado diretamente sem @supports para máxima compatibilidade */
-  padding-top: env(safe-area-inset-top, 0px);
+  /* O topo fica encostado no app para não criar a faixa visual de status bar. */
+  padding-top: 0;
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);
 }
@@ -169,11 +169,4 @@ body.auth-scroll-page #root {
 .hide-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
-}
-
-/* Utility class for standalone PWA detection */
-@media all and (display-mode: standalone) {
-  .app-content {
-    padding-top: max(env(safe-area-inset-top, 0px), 20px);
-  }
 }

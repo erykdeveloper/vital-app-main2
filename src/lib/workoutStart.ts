@@ -33,7 +33,7 @@ function stripAccents(value: string) {
 function cleanPlanLine(line: string) {
   return line
     .replace(/^\s*(?:[-*]|\u2022)\s*/, "")
-    .replace(/^\s*\d+\s*[\).:-]\s*/, "")
+    .replace(/^\s*\d+\s*[).:-]\s*/, "")
     .replace(/\s+/g, " ")
     .trim();
 }

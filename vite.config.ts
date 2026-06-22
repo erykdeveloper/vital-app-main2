@@ -30,7 +30,8 @@ export default defineConfig(({ mode }) => ({
         description: "App de saúde e performance Vitalissy",
         theme_color: "#1a0a23",
         background_color: "#1a0a23",
-        display: "standalone",
+        display: "fullscreen",
+        display_override: ["fullscreen", "standalone"],
         orientation: "portrait",
         start_url: "/",
         icons: [
