@@ -37,6 +37,7 @@ import {
 } from '@/components/ui/drawer';
 import { useProfile } from '@/hooks/useProfile';
 import { fetchCardioWorkouts, fetchStrengthWorkouts, type CardioWorkoutApi, type StrengthWorkoutApi } from '@/lib/workoutApi';
+import type { WorkoutStartState } from '@/lib/workoutStart';
 import { cn } from '@/lib/utils';
 
 type WorkoutSource = 'free' | 'personal' | 'suggested';
@@ -112,78 +113,202 @@ const tabs: Array<{ id: ActiveTab; label: string }> = [
   { id: 'history', label: 'Histórico' },
 ];
 
-const muscleGroups: MuscleGroup[] = [
+type CommonExerciseGroup = MuscleGroup & {
+  exercises: string[];
+};
+
+const strengthWorkoutRoute = '/workouts/musculacao/academia';
+
+const commonExerciseGroups: CommonExerciseGroup[] = [
   {
-    id: 'musculacao',
-    label: 'Musculação',
-    count: '24 treinos',
-    route: '/workouts/musculacao/academia',
+    id: 'peito',
+    label: 'Peito',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
     icon: Dumbbell,
     tone: 'from-primary/18 to-primary/5',
+    exercises: ['Supino reto', 'Supino inclinado', 'Crucifixo', 'Crossover', 'Flexão de braços'],
   },
   {
-    id: 'cardio',
-    label: 'Cardio',
-    count: '18 treinos',
-    route: '/workouts/cardio/hiit',
-    icon: Flame,
-    tone: 'from-orange-500/18 to-orange-500/5',
-  },
-  {
-    id: 'mobilidade',
-    label: 'Mobilidade',
-    count: '12 treinos',
-    route: '/workouts/musculacao/em-casa',
-    icon: Activity,
+    id: 'costas',
+    label: 'Costas',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Dumbbell,
     tone: 'from-sky-500/18 to-sky-500/5',
+    exercises: ['Puxada frontal', 'Barra fixa', 'Remada curvada', 'Remada baixa', 'Remada unilateral'],
   },
   {
-    id: 'corrida',
-    label: 'Corrida',
-    count: '9 treinos',
-    route: '/workouts/cardio/corrida',
-    icon: Footprints,
+    id: 'ombros',
+    label: 'Ombros',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Activity,
+    tone: 'from-violet-500/18 to-violet-500/5',
+    exercises: ['Desenvolvimento', 'Elevação lateral', 'Elevação frontal', 'Crucifixo inverso', 'Face pull'],
+  },
+  {
+    id: 'biceps',
+    label: 'Bíceps',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Dumbbell,
     tone: 'from-emerald-500/18 to-emerald-500/5',
+    exercises: ['Rosca direta', 'Rosca alternada', 'Rosca martelo', 'Rosca Scott', 'Rosca concentrada'],
+  },
+  {
+    id: 'triceps',
+    label: 'Tríceps',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Dumbbell,
+    tone: 'from-orange-500/18 to-orange-500/5',
+    exercises: ['Tríceps pulley', 'Tríceps corda', 'Tríceps testa', 'Tríceps francês', 'Paralelas'],
+  },
+  {
+    id: 'quadriceps',
+    label: 'Quadríceps',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Footprints,
+    tone: 'from-amber-500/18 to-amber-500/5',
+    exercises: ['Agachamento livre', 'Leg press', 'Cadeira extensora', 'Agachamento búlgaro', 'Afundo'],
+  },
+  {
+    id: 'posterior_de_coxa',
+    label: 'Posterior de coxa',
+    count: '4 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Footprints,
+    tone: 'from-rose-500/18 to-rose-500/5',
+    exercises: ['Stiff', 'Levantamento terra romeno', 'Mesa flexora', 'Cadeira flexora'],
+  },
+  {
+    id: 'gluteos',
+    label: 'Glúteos',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Activity,
+    tone: 'from-fuchsia-500/18 to-fuchsia-500/5',
+    exercises: ['Elevação pélvica', 'Hip thrust', 'Agachamento sumô', 'Coice no cabo', 'Cadeira abdutora'],
+  },
+  {
+    id: 'panturrilhas',
+    label: 'Panturrilhas',
+    count: '3 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Footprints,
+    tone: 'from-teal-500/18 to-teal-500/5',
+    exercises: ['Panturrilha em pé', 'Panturrilha sentada', 'Panturrilha no leg press'],
+  },
+  {
+    id: 'abdomen',
+    label: 'Abdômen',
+    count: '5 exercícios',
+    route: strengthWorkoutRoute,
+    icon: Activity,
+    tone: 'from-lime-500/18 to-lime-500/5',
+    exercises: ['Abdominal tradicional', 'Abdominal infra', 'Prancha', 'Abdominal bicicleta', 'Elevação de pernas'],
   },
 ];
 
+const muscleGroups: MuscleGroup[] = commonExerciseGroups.map((group) => ({
+  id: group.id,
+  label: group.label,
+  count: group.count,
+  route: group.route,
+  icon: group.icon,
+  tone: group.tone,
+}));
+
+const groupExerciseDefaults: Record<string, { equipment: string; durationMin: number; calories: number }> = {
+  peito: { equipment: 'Máquina ou peso livre', durationMin: 8, calories: 58 },
+  costas: { equipment: 'Máquina ou peso livre', durationMin: 8, calories: 60 },
+  ombros: { equipment: 'Halteres', durationMin: 7, calories: 48 },
+  biceps: { equipment: 'Halteres ou barra', durationMin: 7, calories: 42 },
+  triceps: { equipment: 'Polia ou halteres', durationMin: 7, calories: 44 },
+  quadriceps: { equipment: 'Máquina ou peso livre', durationMin: 10, calories: 82 },
+  posterior_de_coxa: { equipment: 'Máquina ou barra', durationMin: 9, calories: 72 },
+  gluteos: { equipment: 'Máquina ou peso livre', durationMin: 10, calories: 78 },
+  panturrilhas: { equipment: 'Máquina', durationMin: 6, calories: 34 },
+  abdomen: { equipment: 'Solo', durationMin: 6, calories: 32 },
+};
+
+const exerciseEquipment: Record<string, string> = {
+  'Supino reto': 'Barra',
+  'Supino inclinado': 'Halteres',
+  Crucifixo: 'Halteres',
+  Crossover: 'Polia',
+  'Flexão de braços': 'Peso corporal',
+  'Puxada frontal': 'Polia',
+  'Barra fixa': 'Peso corporal',
+  'Remada curvada': 'Barra',
+  'Remada baixa': 'Cabo',
+  'Remada unilateral': 'Halter',
+  Desenvolvimento: 'Halteres',
+  'Elevação lateral': 'Halteres',
+  'Elevação frontal': 'Halteres',
+  'Crucifixo inverso': 'Halteres',
+  'Face pull': 'Corda',
+  'Rosca direta': 'Barra',
+  'Rosca alternada': 'Halteres',
+  'Rosca martelo': 'Halteres',
+  'Rosca Scott': 'Banco Scott',
+  'Rosca concentrada': 'Halter',
+  'Tríceps pulley': 'Polia',
+  'Tríceps corda': 'Corda',
+  'Tríceps testa': 'Barra W',
+  'Tríceps francês': 'Halter',
+  Paralelas: 'Peso corporal',
+  'Agachamento livre': 'Barra',
+  'Leg press': 'Máquina',
+  'Cadeira extensora': 'Máquina',
+  'Agachamento búlgaro': 'Halteres',
+  Afundo: 'Halteres',
+  Stiff: 'Barra',
+  'Levantamento terra romeno': 'Barra',
+  'Mesa flexora': 'Máquina',
+  'Cadeira flexora': 'Máquina',
+  'Elevação pélvica': 'Barra',
+  'Hip thrust': 'Barra',
+  'Agachamento sumô': 'Halter',
+  'Coice no cabo': 'Cabo',
+  'Cadeira abdutora': 'Máquina',
+  'Panturrilha em pé': 'Máquina',
+  'Panturrilha sentada': 'Máquina',
+  'Panturrilha no leg press': 'Leg press',
+  'Abdominal tradicional': 'Solo',
+  'Abdominal infra': 'Solo',
+  Prancha: 'Solo',
+  'Abdominal bicicleta': 'Solo',
+  'Elevação de pernas': 'Solo',
+};
+
+function slugifyExerciseName(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function createExerciseFromName(group: CommonExerciseGroup, name: string): Exercise {
+  const defaults = groupExerciseDefaults[group.id] ?? { equipment: 'Academia', durationMin: 8, calories: 50 };
+
+  return {
+    id: slugifyExerciseName(name),
+    name,
+    muscleGroup: group.id,
+    equipment: exerciseEquipment[name] ?? defaults.equipment,
+    durationMin: defaults.durationMin,
+    calories: defaults.calories,
+    animationLabel: `Execute ${name.toLowerCase()} com controle, amplitude segura e respiração constante.`,
+  };
+}
+
 const exerciseLibrary: Exercise[] = [
-  {
-    id: 'supino-reto',
-    name: 'Supino reto',
-    muscleGroup: 'musculacao',
-    equipment: 'Barra',
-    durationMin: 8,
-    calories: 60,
-    animationLabel: 'Empurre a barra mantendo escápulas encaixadas.',
-  },
-  {
-    id: 'triceps-corda',
-    name: 'Tríceps corda',
-    muscleGroup: 'musculacao',
-    equipment: 'Polia',
-    durationMin: 7,
-    calories: 45,
-    animationLabel: 'Estenda os cotovelos sem balançar o tronco.',
-  },
-  {
-    id: 'remada-baixa',
-    name: 'Remada baixa',
-    muscleGroup: 'musculacao',
-    equipment: 'Cabo',
-    durationMin: 8,
-    calories: 55,
-    animationLabel: 'Puxe com costas ativas e peito aberto.',
-  },
-  {
-    id: 'agachamento-livre',
-    name: 'Agachamento livre',
-    muscleGroup: 'musculacao',
-    equipment: 'Barra',
-    durationMin: 10,
-    calories: 85,
-    animationLabel: 'Desça controlando joelhos e quadril.',
-  },
+  ...commonExerciseGroups.flatMap((group) => group.exercises.map((exercise) => createExerciseFromName(group, exercise))),
   {
     id: 'corrida-intervalada',
     name: 'Corrida intervalada',
@@ -213,6 +338,28 @@ const exerciseLibrary: Exercise[] = [
     premiumOnly: true,
   },
 ];
+
+function buildCategoryWorkoutStart(group: CommonExerciseGroup): WorkoutStartState {
+  const exercises = exerciseLibrary.filter((exercise) => exercise.muscleGroup === group.id);
+
+  return {
+    source: 'suggested',
+    objective: group.label,
+    trainerName: 'Biblioteca Vitalissy',
+    calories: exercises.reduce((sum, exercise) => sum + (exercise.calories ?? 0), 0),
+    exercises: exercises.map((exercise) => ({
+      name: exercise.name,
+      group: group.label,
+      category: exercise.equipment,
+      location: 'Academia',
+      sets: [
+        { weight: 0, reps: 12, completed: false },
+        { weight: 0, reps: 10, completed: false },
+        { weight: 0, reps: 8, completed: false },
+      ],
+    })),
+  };
+}
 
 const makeWorkoutExercise = (exerciseId: string, order: number): WorkoutExercise => {
   const exercise = exerciseLibrary.find((item) => item.id === exerciseId) ?? exerciseLibrary[0];
@@ -561,10 +708,10 @@ function FreeWorkoutDrawer({
   const navigate = useNavigate();
   const [step, setStep] = useState<FreeWorkoutStep>('muscle');
   const [selectedMuscle, setSelectedMuscle] = useState(muscleGroups[0].id);
-  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>(['supino-reto', 'triceps-corda']);
+  const [selectedExerciseIds, setSelectedExerciseIds] = useState<string[]>(['supino-reto', 'supino-inclinado']);
 
   const currentMuscle = muscleGroups.find((item) => item.id === selectedMuscle) ?? muscleGroups[0];
-  const availableExercises = exerciseLibrary.filter((exercise) => exercise.muscleGroup === selectedMuscle || selectedMuscle === 'musculacao');
+  const availableExercises = exerciseLibrary.filter((exercise) => exercise.muscleGroup === selectedMuscle);
   const selectedExercises = exerciseLibrary.filter((exercise) => selectedExerciseIds.includes(exercise.id));
   const totalMinutes = selectedExercises.reduce((sum, exercise) => sum + (exercise.durationMin ?? 0), 0);
   const totalCalories = selectedExercises.reduce((sum, exercise) => sum + (exercise.calories ?? 0), 0);
@@ -603,7 +750,7 @@ function FreeWorkoutDrawer({
                     setSelectedMuscle(group.id);
                     setSelectedExerciseIds(
                       exerciseLibrary
-                        .filter((exercise) => exercise.muscleGroup === group.id || group.id === 'musculacao')
+                        .filter((exercise) => exercise.muscleGroup === group.id)
                         .slice(0, 2)
                         .map((exercise) => exercise.id),
                     );
@@ -942,11 +1089,11 @@ export default function Workouts() {
             <section className="space-y-3">
               <SectionTitle title="Explorar categorias" />
               <div className="grid grid-cols-2 gap-3">
-                {muscleGroups.map((group) => (
+                {commonExerciseGroups.map((group) => (
                   <button
                     key={group.id}
                     type="button"
-                    onClick={() => navigate(group.route)}
+                    onClick={() => navigate(group.route, { state: buildCategoryWorkoutStart(group) })}
                     className={cn('rounded-[1rem] border border-white/10 bg-gradient-to-br p-4 text-left shadow-elegant transition-transform hover:-translate-y-0.5', group.tone)}
                     aria-label={`Abrir treinos de ${group.label}`}
                   >
